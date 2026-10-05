@@ -109,7 +109,7 @@ dependencies = [
 
 [[package]]
 name = "anonen"
-version = "1.0.115"
+version = "1.0.116"
 dependencies = [
  "anyhow",
  "audiopus",

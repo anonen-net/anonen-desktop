@@ -104,7 +104,21 @@ jobs:
           Write-Host "running image is accepted: $running"
 
       - name: Run the tests the claims rest on
-        run: "cargo test --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest"
+        shell: pwsh
+        run: |
+          cargo test --manifest-path src-tauri/Cargo.toml --no-run
+          $deps = "C:\t\debug\deps"
+          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/1.15.4" -OutFile dml.zip
+          Expand-Archive dml.zip -DestinationPath dml
+          Copy-Item dml\bin\x64-win\DirectML.dll $deps\
+          if (Test-Path "$env:VULKAN_SDK\Bin\vulkan-1.dll") { Copy-Item "$env:VULKAN_SDK\Bin\vulkan-1.dll" $deps\ }
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $dumpbin = & $vswhere -latest -find "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          $exe = Get-ChildItem $deps -Filter "anonen_app_lib-*.exe" | Select-Object -First 1
+          if ($dumpbin -and $exe) { & $dumpbin /nologo /dependents $exe.FullName }
+          Get-Item C:\Windows\System32\DirectML.dll, C:\Windows\System32\vulkan-1.dll -ErrorAction SilentlyContinue |
+            ForEach-Object { "{0} {1}" -f $_.Name, $_.VersionInfo.FileVersion }
+          cargo test --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
