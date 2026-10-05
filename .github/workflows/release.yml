@@ -112,6 +112,15 @@ jobs:
           Expand-Archive dml.zip -DestinationPath dml
           Copy-Item dml\bin\x64-win\DirectML.dll $deps\
           if (Test-Path "$env:VULKAN_SDK\Bin\vulkan-1.dll") { Copy-Item "$env:VULKAN_SDK\Bin\vulkan-1.dll" $deps\ }
+          $manifest = @'
+          <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+          <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+            <dependency><dependentAssembly>
+              <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
+            </dependentAssembly></dependency>
+          </assembly>
+          '@
+          Get-ChildItem $deps -Filter "anonen_app_lib-*.exe" | ForEach-Object { Set-Content -Path "$($_.FullName).manifest" -Value $manifest -Encoding utf8 }
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $dumpbin = & $vswhere -latest -find "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
           $exe = Get-ChildItem $deps -Filter "anonen_app_lib-*.exe" | Select-Object -First 1
@@ -122,13 +131,14 @@ jobs:
               if ($cur -and $line -match '^\s+[0-9A-Fa-f]+\s+(\S+)\s*$') { $imports[$cur] += $Matches[1] }
             }
             foreach ($n in ($imports.Keys | Sort-Object)) {
+              if ($n -like 'api-ms-win-*') { continue }  # api-set は schema で解決される（PATH の写しを見ても意味が無い）
               $cand = @("$deps\$n", "$env:SystemRoot\System32\$n") + ($env:PATH -split ';' | Where-Object { $_ } | ForEach-Object { Join-Path $_ $n })
               $path = $cand | Where-Object { Test-Path $_ } | Select-Object -First 1
               if (-not $path) { "$n -> (file not found; api-set なら正常)"; continue }
               $ver = (Get-Item $path).VersionInfo.FileVersion
-              $exp = & $dumpbin /nologo /exports $path | ForEach-Object { if ($_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+(\S+)') { $Matches[1] } }
+              $exp = & $dumpbin /nologo /exports $path | ForEach-Object { if ($_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+(?:[0-9A-Fa-f]{8}\s+)?(\S+)') { $Matches[1] } }
               $missing = @($imports[$n] | Where-Object { $exp -notcontains $_ })
-              if ($missing.Count -gt 0) { "$n -> $path ($ver) MISSING: $($missing -join ', ')" } else { "$n -> $path ($ver) ok ($($imports[$n].Count) imports)" }
+              if ($missing.Count -gt 0) { "$n -> $path ($ver) MISSING: $($missing -join ', ')" }
             }
           }
           cargo test --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest
