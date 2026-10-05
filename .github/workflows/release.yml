@@ -115,9 +115,22 @@ jobs:
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $dumpbin = & $vswhere -latest -find "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
           $exe = Get-ChildItem $deps -Filter "anonen_app_lib-*.exe" | Select-Object -First 1
-          if ($dumpbin -and $exe) { & $dumpbin /nologo /dependents $exe.FullName }
-          Get-Item C:\Windows\System32\DirectML.dll, C:\Windows\System32\vulkan-1.dll -ErrorAction SilentlyContinue |
-            ForEach-Object { "{0} {1}" -f $_.Name, $_.VersionInfo.FileVersion }
+          if ($dumpbin -and $exe) {
+            $cur = $null; $imports = @{}
+            foreach ($line in (& $dumpbin /nologo /imports $exe.FullName)) {
+              if ($line -match '^\s{4}(\S+\.dll)\s*$') { $cur = $Matches[1].ToLower(); if (-not $imports.ContainsKey($cur)) { $imports[$cur] = @() }; continue }
+              if ($cur -and $line -match '^\s+[0-9A-Fa-f]+\s+(\S+)\s*$') { $imports[$cur] += $Matches[1] }
+            }
+            foreach ($n in ($imports.Keys | Sort-Object)) {
+              $cand = @("$deps\$n", "$env:SystemRoot\System32\$n") + ($env:PATH -split ';' | Where-Object { $_ } | ForEach-Object { Join-Path $_ $n })
+              $path = $cand | Where-Object { Test-Path $_ } | Select-Object -First 1
+              if (-not $path) { "$n -> (file not found; api-set なら正常)"; continue }
+              $ver = (Get-Item $path).VersionInfo.FileVersion
+              $exp = & $dumpbin /nologo /exports $path | ForEach-Object { if ($_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+(\S+)') { $Matches[1] } }
+              $missing = @($imports[$n] | Where-Object { $exp -notcontains $_ })
+              if ($missing.Count -gt 0) { "$n -> $path ($ver) MISSING: $($missing -join ', ')" } else { "$n -> $path ($ver) ok ($($imports[$n].Count) imports)" }
+            }
+          }
           cargo test --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest
 
       - name: Install dependencies
