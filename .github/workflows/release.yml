@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Enable long paths
+        shell: pwsh
+        run: |
+          New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+          git config --system core.longpaths true
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - uses: humbletim/install-vulkan-sdk@30ba978f977e81b72d091fc8888feb1fb26f9aff
+        with:
+          version: 1.4.309.0
+          cache: true
+
+      - name: Verify release tag
+        shell: pwsh
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "tag/version mismatch" }
+
+      - name: Verify the updater is wired up
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          $placeholder = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMzQkZEOTMyQ0M4NENCMkQKUldRdHk0VE1NdG0vd3lqRmRnbDlMOVdad1VQNXlnazUxd3pFQ1pKSDY3OUp6MXVRT0tLeUppMEYK"
+          $updater = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).plugins.updater
+          if ($updater.pubkey -eq $placeholder) {
+            throw "updater pubkey is still the placeholder - generate a signing key and replace it"
+          }
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            throw "TAURI_SIGNING_PRIVATE_KEY is required to sign the update"
+          }
+          if ($updater.endpoints[0] -notlike "https://*") { throw "updater endpoint must be https" }
+
+      - name: Configure product build
+        shell: pwsh
+        env:
+          ANONEN_CLOUD_URL: ${{ vars.ANONEN_CLOUD_URL || 'https://api.anonen.net' }}
+          ANONEN_SUPABASE_URL: ${{ vars.ANONEN_SUPABASE_URL }}
+          ANONEN_SUPABASE_ANON_KEY: ${{ vars.ANONEN_SUPABASE_ANON_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ANONEN_SUPABASE_URL)) { throw "ANONEN_SUPABASE_URL is required" }
+          if ([string]::IsNullOrWhiteSpace($env:ANONEN_SUPABASE_ANON_KEY)) { throw "ANONEN_SUPABASE_ANON_KEY is required" }
+          if ($env:ANONEN_CLOUD_URL -notlike "https://*") { throw "ANONEN_CLOUD_URL must be https" }
+          if ($env:ANONEN_SUPABASE_URL -notlike "https://*") { throw "ANONEN_SUPABASE_URL must be https" }
+          @(
+            "ANONEN_CLOUD_URL=$env:ANONEN_CLOUD_URL"
+            "ANONEN_SUPABASE_URL=$env:ANONEN_SUPABASE_URL"
+            "ANONEN_SUPABASE_ANON_KEY=$env:ANONEN_SUPABASE_ANON_KEY"
+            "ANONEN_SEALED_REQUIRED=true"
+          ) | Set-Content src-tauri/.env
+          $config = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
+          $config.bundle.createUpdaterArtifacts = $true
+          $config | ConvertTo-Json -Depth 100 | Set-Content src-tauri/tauri.conf.json
+          "CARGO_TARGET_DIR=C:\t" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Verify the gateway can seal
+        shell: pwsh
+        env:
+          ANONEN_CLOUD_URL: ${{ vars.ANONEN_CLOUD_URL || 'https://api.anonen.net' }}
+        run: |
+          $accepted = @(Get-Content src-tauri/accepted-digests.txt |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -and -not $_.StartsWith('#') })
+          if ($accepted.Count -eq 0) {
+            throw "accepted-digests.txt lists no digest (empty accepts no enclave at all)"
+          }
+          $url = "$env:ANONEN_CLOUD_URL/v1/attestation?nonce=aaaaaaaaaaaaaaaa"
+          $res = Invoke-WebRequest -Uri $url -Method Get -TimeoutSec 30 -SkipHttpErrorCheck
+          if ($res.StatusCode -ne 200) {
+            throw "ANONEN_CLOUD_URL cannot seal: /v1/attestation returned HTTP $($res.StatusCode)"
+          }
+          $payload = ($res.Content | ConvertFrom-Json).token.Split('.')[1].Replace('_','/').Replace('-','+')
+          $payload = $payload.PadRight([int][Math]::Ceiling($payload.Length / 4) * 4, '=')
+          $claims = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json
+          $running = $claims.submods.container.image_digest
+          if ($accepted -notcontains $running) {
+            throw "running image $running is not in accepted-digests.txt"
+          }
+          Write-Host "running image is accepted: $running"
+
+      - name: Run the tests the claims rest on
+        run: "cargo test --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build frontend
+        run: bun run build
+
+      - name: Build installers
+        shell: pwsh
+        env:
+          GGML_NATIVE: "OFF"
+          GGML_AVX: "OFF"
+          GGML_AVX2: "OFF"
+          GGML_FMA: "OFF"
+          GGML_F16C: "OFF"
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: bun run tauri build --bundles nsis,msi
+
+      - name: Collect release files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Get-ChildItem C:\t\release\bundle -Recurse -Include *.exe,*.msi | Copy-Item -Destination release
+          if ((Get-ChildItem release).Count -eq 0) { throw "no installers were built" }
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: release/*
+
+      - name: Build the update manifest
+        shell: pwsh
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $base = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME"
+
+          function New-Entry($installer) {
+            $sig = "$($installer.FullName).sig"
+            if (-not (Test-Path $sig)) { throw "missing update signature for $($installer.Name)" }
+            return @{
+              signature = (Get-Content $sig -Raw).Trim()
+              url       = "$base/$($installer.Name)"
+            }
+          }
+
+          $nsis = Get-ChildItem C:\t\release\bundle -Recurse -Filter *-setup.exe | Select-Object -First 1
+          if (-not $nsis) { throw "no NSIS installer to publish" }
+          $nsisEntry = New-Entry $nsis
+
+          $platforms = @{
+            "windows-x86_64"      = $nsisEntry
+            "windows-x86_64-nsis" = $nsisEntry
+          }
+
+          $msi = Get-ChildItem C:\t\release\bundle -Recurse -Filter *.msi | Select-Object -First 1
+          if ($msi) { $platforms["windows-x86_64-msi"] = New-Entry $msi }
+
+          @{
+            version   = $version
+            pub_date  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = $platforms
+          } | ConvertTo-Json -Depth 10 | Set-Content release/latest.json -Encoding utf8
+
+          Get-Content release/latest.json
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem release | ForEach-Object { $_.FullName }
+          gh release create $env:GITHUB_REF_NAME $files --title "Release $env:GITHUB_REF_NAME" --notes "Verified release build."

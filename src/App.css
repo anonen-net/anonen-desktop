@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-mono:
+    "IBM Plex Mono", ui-monospace, "Cascadia Code", "Source Code Pro", Menlo,
+    Consolas, "DejaVu Sans Mono", monospace;
+
+  --color-text: #1c1917;
+  --color-background: #fafaf9;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f5f5f4;
+  --color-muted: #78716c;
+  --color-border: #57534e;
+  --color-shadow: rgb(28 25 23 / 0.2);
+  --color-accent: #16a34a;
+  --color-accent-dim: #166534;
+
+  --color-background-ui: #16a34a;
+  --color-logo-primary: #16a34a;
+  --color-logo-stroke: #1c1917;
+  --color-text-stroke: #fafaf9;
+  --color-mid-gray: #78716c;
+
+  --shadow-hard: 6px 6px 0 var(--color-shadow);
+  --shadow-hard-sm: 4px 4px 0 var(--color-shadow);
+  --shadow-hard-xs: 2px 2px 0 var(--color-shadow);
+}
+
+:root {
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  --scrollbar-thumb: color-mix(in srgb, var(--color-text), transparent 85%);
+  --scrollbar-thumb-hover: color-mix(
+    in srgb,
+    var(--color-text),
+    transparent 70%
+  );
+
+  color: var(--color-text);
+  background-color: var(--color-background);
+}
+
+.container {
+  margin: 0;
+  padding-top: 10vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+:root[data-theme="dark"] {
+  --color-text: #f5f5f4;
+  --color-background: #1c1917;
+  --color-surface: #292524;
+  --color-surface-alt: #44403c;
+  --color-muted: #a8a29e;
+  --color-border: #78716c;
+  --color-shadow: rgb(0 0 0 / 0.45);
+  --color-logo-stroke: #f5f5f4;
+  --color-text-stroke: #1c1917;
+  --color-mid-gray: #a8a29e;
+}
+
+:root[data-platform="macos"] {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+:root:not([data-platform="macos"]) ::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+:root:not([data-platform="macos"]) ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root:not([data-platform="macos"]) ::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 20px;
+  border: 3px solid transparent;
+  border-right-width: 4px;
+  border-left-width: 3px;
+  background-clip: content-box;
+  min-height: 32px;
+}
+
+:root:not([data-platform="macos"]) ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+@layer utilities {
+  .text-stroke {
+    -webkit-text-stroke: 2px var(--color-text-stroke);
+  }
+}
+
+@layer components {
+  .range-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--color-logo-primary);
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+  }
+  .range-thumb::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--color-logo-primary);
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+  }
+}
+
+.logo-primary {
+  fill: var(--color-logo-primary);
+}
+
+.logo-stroke {
+  fill: var(--color-logo-stroke);
+  stroke: var(--color-logo-stroke);
+  stroke-width: 1;
+}

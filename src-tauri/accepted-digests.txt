@@ -1,0 +1,18 @@
+# Container image digests this build will seal to (sealed-audio contract V13),
+# one `sha256:` + 64-hex digest per line. `#` starts a comment.
+#
+# The app compares the attested submods.container.image_digest against this
+# list and refuses to seal -- so refuses to send -- when the running image is
+# not on it. An empty list accepts nothing, not everything, and build.rs stops
+# a sealed build whose list is empty or misspelt.
+#
+# This is a committed file, not a .env entry, on purpose: the value travels
+# with the code, so a checkout that carries the check also carries the list,
+# and anyone can read which images each release accepted.
+#
+# Rolling out a new image is app-first: add the new digest here NEXT TO the
+# old one, release, let the release reach users, then swap the server, then
+# drop the old line in the release after that. Swapping the server first stops
+# transcription for everyone who has not updated yet.
+
+sha256:d873762c5d7ea5bf4a22f2dff3f96bfc42bc0bb5ec186acc3b2c3edbfe34d11c

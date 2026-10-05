@@ -1,0 +1,969 @@
+{
+  "tray": {
+    "settings": "設定…",
+    "checkUpdates": "アップデートを確認…",
+    "copyLastTranscript": "最新の文字起こしをコピー",
+    "unloadModel": "モデルをアンロード",
+    "model": "モデル",
+    "quit": "終了",
+    "cancel": "キャンセル"
+  },
+  "sidebar": {
+    "general": "設定",
+    "models": "モデル",
+    "advanced": "詳細設定",
+    "postProcessing": "後処理",
+    "history": "履歴",
+    "howto": "使い方",
+    "debug": "デバッグ",
+    "about": "概要",
+    "logs": "ログ"
+  },
+  "howtoSteps": {
+    "press": "<key></key> を押す",
+    "pressHold": "<key></key> を押したまま",
+    "pressCaption": "録音が始まります",
+    "speak": "話す",
+    "speakSample": "ためしに、こう言ってみてください",
+    "speakQuote": "「{{text}}」",
+    "stop": "もう一度 <key></key> を押す",
+    "stopHold": "<key></key> を離す",
+    "stopCaption": "止まって、文字になります",
+    "cancel": "途中でやめるときは"
+  },
+  "onboarding": {
+    "downloadConfirm": {
+      "title": "ダウンロードしますか？",
+      "body": "{{name}} は約 {{size}} あります。回線によっては数分から十数分かかります。",
+      "ok": "ダウンロードする",
+      "cancel": "やめる"
+    },
+    "subtitle": "開始するには、文字起こしのモデルを選択してください",
+    "chooseLater": "あとで選ぶ",
+    "recommended": "おすすめ",
+    "customModelDescription": "公式サポート対象外",
+    "modelCard": {
+      "accuracy": "精度",
+      "speed": "速度",
+      "pricePerHour": "${{price}}/時間",
+      "measured": "実測 {{seconds}}秒（{{count}}回）",
+      "speedFromMeasured": "この端末での実測にもとづく相対値です"
+    },
+    "models": {
+      "small": {
+        "name": "Whisper Small",
+        "description": "高速でそこそこ正確。"
+      },
+      "medium": {
+        "name": "Whisper Medium",
+        "description": "良好な精度、中程度の速度"
+      },
+      "turbo": {
+        "name": "Whisper Turbo",
+        "description": "精度と速度のバランスが良い。"
+      },
+      "large": {
+        "name": "Whisper Large",
+        "description": "PC 内で処理が完結。速度はマシン次第"
+      },
+      "parakeet-tdt-0.6b-v2": {
+        "name": "Parakeet V2",
+        "description": "英語のみ。英語話者に最適なモデル。"
+      },
+      "parakeet-tdt-0.6b-v3": {
+        "name": "Parakeet V3",
+        "description": "高速で正確"
+      },
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "description": "非常に高速、英語のみ。アクセントにも対応。"
+      },
+      "moonshine-tiny-streaming-en": {
+        "name": "Moonshine V2 Tiny",
+        "description": "超高速、英語のみ"
+      },
+      "moonshine-small-streaming-en": {
+        "name": "Moonshine V2 Small",
+        "description": "高速、英語のみ。速度と精度のバランスが良い。"
+      },
+      "moonshine-medium-streaming-en": {
+        "name": "Moonshine V2 Medium",
+        "description": "英語のみ。高品質。"
+      },
+      "breeze-asr": {
+        "name": "Breeze ASR",
+        "description": "台湾華語に最適化。コードスイッチングに対応。"
+      },
+      "sense-voice-int8": {
+        "name": "SenseVoice",
+        "description": "非常に高速。中国語、英語、日本語、韓国語、広東語。"
+      },
+      "gigaam-v3-e2e-ctc": {
+        "name": "GigaAM v3",
+        "description": "ロシア語音声認識。高速かつ高精度。"
+      },
+      "canary-180m-flash": {
+        "name": "Canary 180M Flash",
+        "description": "非常に高速。英語、ドイツ語、スペイン語、フランス語。翻訳対応。"
+      },
+      "canary-1b-v2": {
+        "name": "Canary 1B v2",
+        "description": "高精度な多言語対応。25のヨーロッパ言語。翻訳対応。"
+      },
+      "cohere-int8": {
+        "name": "Cohere",
+        "description": "大型で低速ですが、非常に高精度な多言語モデル。"
+      }
+    },
+    "errors": {
+      "loadModels": "利用可能なモデルの読み込みに失敗しました",
+      "downloadModel": "モデルのダウンロードに失敗しました: {{error}}",
+      "selectModel": "モデルを切り替えられませんでした。もう一度お試しください。"
+    },
+    "permissions": {
+      "title": "権限が必要です",
+      "description": "あのねんが正常に動作するにはいくつかの権限が必要です。",
+      "microphone": {
+        "title": "マイクへのアクセス",
+        "description": "文字起こしのためにあなたの声を聞くために必要です。"
+      },
+      "accessibility": {
+        "title": "アクセシビリティへのアクセス",
+        "description": "アプリに文字起こししたテキストを入力するために必要です。"
+      },
+      "grant": "権限を許可",
+      "granted": "許可済み",
+      "waiting": "待機中…",
+      "allGranted": "準備完了!",
+      "errors": {
+        "checkFailed": "権限の確認に失敗しました。もう一度お試しください。",
+        "requestFailed": "権限のリクエストに失敗しました。もう一度お試しください。"
+      }
+    },
+    "download": "ダウンロード",
+    "downloading": "ダウンロード中...",
+    "downloadFailed": "ダウンロードに失敗しました。もう一度お試しください。",
+    "shortcut": {
+      "title": "録音のはじめ方を決めます",
+      "description": "このキーで、録音を始めたり止めたりします。使い方は次の画面で試せます。",
+      "inputTitle": "録音を始めるキー",
+      "inputDescription": "枠を押してから、使いたいキーを押すと変えられます。",
+      "changeLater": "ほかのアプリとぶつかるときは、別のキーにしてください。あとで「設定」からも変えられます。",
+      "next": "次へ"
+    },
+    "firstRun": {
+      "title": "一度、試してみましょう",
+      "description": "1 → 2 → 3 の順にやってみてください。",
+      "sampleText": "今日はいい天気ですね",
+      "recording": "録音中です",
+      "working": "文字にしています…",
+      "success": "できました",
+      "whereItGoes": "ふだんは、そのとき使っているアプリの入力欄に文字が入ります。この画面では結果をここに出しています。",
+      "finish": "はじめる",
+      "skip": "あとで試す"
+    }
+  },
+  "modelSelector": {
+    "custom": "カスタム",
+    "localModel": "ローカル",
+    "active": "アクティブ",
+    "switching": "切替中…",
+    "noModelsAvailable": "利用可能なモデルがありません",
+    "verifying": "{{modelName}}を検証中…",
+    "verifyingGeneric": "検証中…",
+    "extracting": "{{modelName}}を展開中…",
+    "extractingMultiple": "{{count}}個のモデルを展開中…",
+    "extractingGeneric": "展開中…",
+    "downloading": "ダウンロード中 {{percentage}}%",
+    "downloadingMultiple": "{{count}}個のモデルをダウンロード中…",
+    "modelReady": "モデル準備完了",
+    "loading": "{{modelName}}を読み込み中…",
+    "loadingGeneric": "読み込み中…",
+    "modelError": "モデルエラー",
+    "modelUnloaded": "モデルがアンロードされました",
+    "noModelDownloadRequired": "モデルなし - ダウンロードが必要",
+    "deleteModel": "{{modelName}}を削除",
+    "downloadSpeed": "{{speed}} MB/s",
+    "capabilities": {
+      "languageSelection": "複数の入力言語をサポート",
+      "translation": "英語への翻訳が可能",
+      "translate": "英語に翻訳",
+      "singleLanguage": "この言語のみ対応",
+      "languageOnly": "{{language}}のみ",
+      "multiLanguage": "多言語",
+      "usageDiscount": "他のモデルより、枠の消費量が {{percent}}% 少なくなります。",
+      "usageSurcharge": "他のモデルより、枠の消費量が {{percent}}% 多くなります。"
+    },
+    "cancel": "キャンセル",
+    "cancelDownload": "ダウンロードをキャンセル",
+    "modelStatusCheckFailed": "モデルの状態を確認できませんでした",
+    "modelSwitchFailed": "モデルの切り替えに失敗しました",
+    "usageDiscountShort": "消費量 {{percent}}% OFF",
+    "usageSurchargeShort": "消費量 {{percent}}% 増加",
+    "details": "詳細",
+    "languageSelectable": "言語を指定できる",
+    "languageAutoOnly": "言語は自動判別のみ",
+    "translationSupported": "英語への翻訳に対応",
+    "translationUnsupported": "英語への翻訳は非対応"
+  },
+  "settings": {
+    "modelSettings": {
+      "title": "文字起こし"
+    },
+    "models": {
+      "title": "モデル",
+      "description": "モデルを選択するか、追加のモデルをダウンロードします。モデルによって精度と速度が異なります。",
+      "deleteConfirm": "{{modelName}}を削除してもよろしいですか? 再度使用するにはダウンロードが必要です。",
+      "deleteActiveConfirm": "{{modelName}}は現在使用中のモデルです。削除すると、新しいモデルを選択するまで文字起こしが停止します。本当に削除しますか?",
+      "deleteTitle": "モデルを削除",
+      "filters": {
+        "allLanguages": "すべての言語",
+        "all": "すべて",
+        "multiLanguage": "多言語",
+        "translation": "翻訳"
+      },
+      "noModelsMatch": "このフィルターに一致するモデルがありません。",
+      "yourModels": "ダウンロード済みモデル",
+      "availableModels": "ダウンロード可能",
+      "downloaded": "ダウンロード済み",
+      "available": "ダウンロード可能",
+      "apiKey": {
+        "title": "APIキー",
+        "placeholder": "APIキーを入力"
+      },
+      "refresh": "一覧を更新",
+      "resetStats": "実測をリセット",
+      "statsReset": "応答時間の実測を消しました"
+    },
+    "general": {
+      "title": "一般",
+      "shortcut": {
+        "title": "あのねんショートカット",
+        "description": "音声録音を開始するキーボードショートカットを設定",
+        "loading": "ショートカットを読み込み中…",
+        "none": "ショートカットが設定されていません",
+        "notFound": "ショートカットが見つかりません",
+        "pressKeys": "キーを押してください…",
+        "bindings": {
+          "transcribe": {
+            "name": "文字起こしのショートカット",
+            "description": "音声を録音して文字起こしするためのキーボードショートカット。"
+          },
+          "cancel": {
+            "name": "キャンセルのショートカット",
+            "description": "現在の録音をキャンセルするためのキーボードショートカット。"
+          },
+          "transcribe_with_post_process": {
+            "name": "後処理のショートカット",
+            "description": "文字起こしに常に AI 後処理を適用するキーボードショートカット。 (任意)"
+          }
+        },
+        "errors": {
+          "restore": "元のショートカットを復元できませんでした",
+          "set": "ショートカットを設定できませんでした: {{error}}",
+          "reset": "ショートカットを元の値にリセットできませんでした"
+        },
+        "warnings": {
+          "noModifier": "Ctrl や Shift などと組み合わせないと、このキーを打つたびに録音が始まります。",
+          "duplicate": "「{{other}}」と同じキーです。どちらか一方しか動きません。",
+          "wellKnown": "ほかのアプリで広く使われているキーです。ぶつかると録音が始まりません。"
+        }
+      },
+      "language": {
+        "title": "言語",
+        "description": "音声認識の言語を選択してください。自動を選択すると言語を自動的に判定します。特定の言語を選択すると、その言語の精度が向上する場合があります。",
+        "searchPlaceholder": "言語を検索…",
+        "noResults": "言語が見つかりません",
+        "auto": "自動",
+        "descriptionUnsupported": "Parakeetモデルは言語を自動的に検出します。手動選択は不要です。"
+      },
+      "pushToTalk": {
+        "label": "プッシュツートーク",
+        "description": "押し続けて録音、離して停止"
+      },
+      "version": "あのねん v{{version}}"
+    },
+    "sound": {
+      "title": "サウンド",
+      "microphone": {
+        "title": "マイク",
+        "description": "使用するマイクデバイスを選択",
+        "placeholder": "マイクを選択…",
+        "loading": "読み込み中…",
+        "lowVolumeTitle": "入力音量が低いことを検出",
+        "lowVolumeWarning": "入力音量が非常に低いです ({{db}} dB)。文字起こしの精度が低下する可能性があります。マイクのゲイン・距離・オーディオの強化設定を確認してください。"
+      },
+      "channel": {
+        "title": "入力チャンネル",
+        "description": "録音に使用する入力チャンネルを選択します。オーディオインターフェースに複数の入力がある場合に使用してください。",
+        "average": "すべてのチャンネルの平均",
+        "channel": "チャンネル{{n}}"
+      },
+      "audioFeedback": {
+        "label": "オーディオフィードバック",
+        "description": "録音の開始と停止時にサウンドを再生"
+      },
+      "outputDevice": {
+        "title": "出力デバイス",
+        "description": "フィードバック用の音声出力デバイスを選択",
+        "placeholder": "出力デバイスを選択…",
+        "loading": "読み込み中…"
+      },
+      "volume": {
+        "title": "音量",
+        "description": "オーディオフィードバックの音量を調整"
+      }
+    },
+    "advanced": {
+      "groups": {
+        "app": "アプリ",
+        "output": "出力",
+        "transcription": "文字起こし",
+        "history": "履歴",
+        "experimental": "実験的"
+      },
+      "experimentalToggle": {
+        "label": "実験的な機能",
+        "description": "まだ開発中の実験的な機能を有効にします。"
+      },
+      "lazyStreamClose": {
+        "label": "文字起こし間でマイクを有効にする",
+        "description": "録音停止後マイクを30秒間有効なままにし、連続した文字起こしの遅延を軽減します。Bluetooth 音声品質に影響する場合があります。"
+      },
+      "acceleration": {
+        "ort": {
+          "title": "ONNX アクセラレーション",
+          "description": "ONNX モデルのハードウェアアクセラレーション (Parakeet、Canary、Moonshine など)。Windows の DirectML は実験的です。モデルの文字起こしに失敗する場合があります。"
+        },
+        "gpuDevice": {
+          "auto": "自動",
+          "title": "GPUデバイス",
+          "description": "Whisper推論に使用するGPUを選択します。自動は専用GPUを選択します。"
+        },
+        "whisper": {
+          "title": "Whisper アクセラレーション",
+          "description": "Whisper モデルのハードウェアアクセラレーション。自動モードでは利用可能な場合 GPU を使用します（macOS では Metal、Windows/Linux では Vulkan）。"
+        },
+        "flashAttention": {
+          "label": "Flash attention（Whisper）",
+          "description": "切り分け用の設定です。切ると端末内 Whisper は遅くなりますが、グラフィックボードの使い方が変わります。転写中にアプリが落ちるときに試してください。"
+        }
+      },
+      "startHidden": {
+        "label": "非表示で起動",
+        "description": "ウィンドウを開かずにシステムトレイに起動。"
+      },
+      "autostart": {
+        "label": "起動時に実行",
+        "description": "コンピューターにログインしたときにあのねんを自動的に起動。"
+      },
+      "showTrayIcon": {
+        "label": "トレイアイコンを表示",
+        "description": "システムトレイにあのねんのアイコンを表示します。"
+      },
+      "overlay": {
+        "title": "オーバーレイ位置",
+        "description": "録音と文字起こし中に視覚的なフィードバックオーバーレイを表示。Linuxでは「なし」を推奨。",
+        "options": {
+          "none": "なし",
+          "bottom": "下",
+          "top": "上"
+        }
+      },
+      "pasteMethod": {
+        "title": "貼り付け方法",
+        "description": "テキストの挿入方法を選択。「直接」はシステム入力でタイピングをシミュレート。「なし」は貼り付けをスキップし、履歴/クリップボードのみ更新。",
+        "options": {
+          "clipboard": "クリップボード ({{modifier}}+V)",
+          "clipboardCtrlShiftV": "クリップボード (Ctrl+Shift+V)",
+          "clipboardShiftInsert": "クリップボード (Shift+Insert)",
+          "direct": "直接",
+          "none": "なし",
+          "externalScript": "外部スクリプト"
+        },
+        "externalScriptPlaceholder": "/path/to/your/script.sh"
+      },
+      "typingTool": {
+        "title": "タイピングツール",
+        "description": "直接貼り付け方式で使用する Linux のタイピングツールを選択します。Auto は自動的に最適なツールを検出して使用します。",
+        "options": {
+          "auto": "自動 (推奨)"
+        }
+      },
+      "clipboardHandling": {
+        "title": "クリップボードの処理",
+        "description": "クリップボードを変更しないを選択すると、文字起こし後も現在のクリップボード内容が保持されます。クリップボードにコピーを選択すると、貼り付け後も文字起こし結果がクリップボードに残ります。",
+        "options": {
+          "dontModify": "クリップボードを変更しない",
+          "copyToClipboard": "クリップボードにコピー"
+        }
+      },
+      "autoSubmit": {
+        "title": "自動送信",
+        "description": "テキスト挿入後に選択したキーの組み合わせを自動的に送信します。macOS では Cmd+Enter、Windows/Linux では Super+Enter が適用されます。",
+        "options": {
+          "off": "オフ",
+          "enter": "Enter",
+          "cmdEnter": "Cmd+Enter",
+          "superEnter": "Super+Enter",
+          "ctrlEnter": "Ctrl+Enter"
+        }
+      },
+      "translateToEnglish": {
+        "label": "英語に翻訳",
+        "description": "文字起こし中に他の言語から英語に自動的に翻訳。",
+        "descriptionUnsupported": "翻訳は{{model}}モデルではサポートされていません。"
+      },
+      "modelUnload": {
+        "title": "モデルのアンロード",
+        "description": "指定時間モデルが使用されていない場合、GPU/CPU メモリを自動的に解放",
+        "options": {
+          "never": "しない",
+          "immediately": "即座に",
+          "min2": "2分後",
+          "min5": "5分後",
+          "min10": "10分後",
+          "min15": "15分後",
+          "hour1": "1時間後",
+          "sec15": "15秒後 (デバッグ)"
+        }
+      },
+      "customWords": {
+        "title": "カスタム単語",
+        "description": "対応モデルが名前や専門用語を認識しやすくします。あいまい補正は現在、A～Zの英字と数字を使用する単語に限定されています。",
+        "placeholder": "単語を追加",
+        "add": "追加",
+        "remove": "{{word}}を削除",
+        "duplicate": "「{{word}}」は既に存在します"
+      },
+      "fillerWordRemoval": {
+        "title": "フィラー語を削除",
+        "description": "文字起こしから一般的なフィラー語を削除します。残すにはオフにしてください。"
+      },
+      "title": "詳細設定",
+      "remoteAsr": {
+        "opusCompression": {
+          "label": "Opus音声圧縮",
+          "description": "送信前にOpusコーデックで音声を圧縮（約10倍小さくなる）。サーバーがOpus/OGGに対応しない場合は無効にしてください。"
+        }
+      }
+    },
+    "postProcessing": {
+      "hotkey": {
+        "title": "ショートカット"
+      },
+      "api": {
+        "title": "API (OpenAI 互換)",
+        "provider": {
+          "title": "プロバイダー",
+          "description": "OpenAI 互換のプロバイダーを選択。"
+        },
+        "baseUrl": {
+          "title": "ベース URL",
+          "description": "選択したプロバイダーの API ベース URL。カスタムプロバイダーのみ編集可能。",
+          "placeholder": "https://api.openai.com/v1"
+        },
+        "apiKey": {
+          "title": "API キー",
+          "description": "選択したプロバイダーの API キー。",
+          "placeholder": "sk-…"
+        },
+        "model": {
+          "title": "モデル",
+          "descriptionCustom": "カスタムエンドポイントが期待するモデル識別子を指定。",
+          "descriptionDefault": "選択したプロバイダーが提供するモデルを選択。",
+          "placeholderWithOptions": "モデルを検索または選択",
+          "placeholderNoOptions": "モデル名を入力",
+          "refreshModels": "モデルを更新"
+        }
+      },
+      "prompts": {
+        "title": "プロンプト",
+        "selectedPrompt": {
+          "title": "選択したプロンプト",
+          "description": "文字起こしを改善するテンプレートを選択するか、新しく作成します。プロンプトテキスト内で ${output} を使用して、キャプチャした文字起こしを参照します。"
+        },
+        "noPrompts": "プロンプトがありません",
+        "selectPrompt": "プロンプトを選択",
+        "createNew": "新しいプロンプトを作成",
+        "promptLabel": "プロンプト名",
+        "promptLabelPlaceholder": "プロンプト名を入力",
+        "promptInstructions": "プロンプトの指示",
+        "promptInstructionsPlaceholder": "文字起こし後に実行する指示を記述します。例: 以下のテキストの文法と明瞭さを改善してください: ${output}",
+        "promptTip": "ヒント: <code>${output}</code> を使用して、文字起こしテキストをプロンプトに挿入します。",
+        "updatePrompt": "プロンプトを更新",
+        "deletePrompt": "プロンプトを削除",
+        "createPrompt": "プロンプトを作成",
+        "cancel": "キャンセル",
+        "selectToEdit": "上からプロンプトを選択して、詳細を表示・編集します。",
+        "createFirst": "上の「新しいプロンプトを作成」をクリックして、最初の後処理プロンプトを作成してください。"
+      },
+      "title": "後処理"
+    },
+    "history": {
+      "title": "履歴",
+      "openFolder": "録音フォルダを開く",
+      "loading": "履歴を読み込み中…",
+      "empty": "まだ文字起こしがありません。録音を開始して履歴を作成しましょう!",
+      "copyToClipboard": "文字起こしをクリップボードにコピー",
+      "save": "お気に入りに入れる",
+      "unsave": "お気に入りから外す",
+      "favoritesOnly": "お気に入りだけ",
+      "favoritesEmpty": "お気に入りはまだありません",
+      "delete": "エントリーを削除",
+      "deleteError": "エントリーの削除に失敗しました。もう一度お試しください。",
+      "retranscribe": "再文字起こし",
+      "retranscribeError": "再文字起こしに失敗しました。もう一度お試しください。",
+      "transcribing": "文字起こし中…",
+      "transcriptionFailed": "文字起こしに失敗しました。リトライアイコンを使用して再文字起こしできます。",
+      "noAudio": "録音は残っていません（文字だけ残しています）",
+      "clearAll": "すべて削除",
+      "clearAllTitle": "すべての履歴を削除",
+      "clearAllConfirm": "すべての文字起こし履歴と録音を削除しますか？この操作は取り消せません。",
+      "clearAllError": "履歴の削除に失敗しました",
+      "retranscribeWithPostProcess": "後処理ありで再文字起こし",
+      "retranscribeWithPostProcessError": "後処理ありの再文字起こしに失敗しました。もう一度お試しください。",
+      "retranscribeOpus": "Opus圧縮で再文字起こし",
+      "retranscribeWav": "WAV(無圧縮)で再文字起こし",
+      "retranscribedOpus": "Opus圧縮で再文字起こしました",
+      "retranscribedWav": "WAV(無圧縮)で再文字起こしました",
+      "postProcessed": "後処理済み",
+      "revisionPosition": "{{index}} / {{total}}",
+      "revisionOlder": "前へ",
+      "revisionNewer": "次へ"
+    },
+    "debug": {
+      "title": "デバッグ",
+      "logDirectory": {
+        "title": "ログディレクトリ",
+        "description": "ログファイルの保存場所"
+      },
+      "logLevel": {
+        "title": "ログレベル",
+        "description": "ログの詳細度を設定"
+      },
+      "updateChecks": {
+        "label": "アップデートを確認",
+        "description": "あのねんの新しいバージョンを自動的にチェック"
+      },
+      "soundTheme": {
+        "label": "サウンドテーマ",
+        "description": "録音開始・停止フィードバックのサウンドテーマを選択"
+      },
+      "wordCorrectionThreshold": {
+        "title": "単語修正しきい値",
+        "description": "カスタム単語修正の感度"
+      },
+      "historyLimit": {
+        "title": "履歴上限",
+        "description": "保持する履歴エントリーの最大数",
+        "entries": "件"
+      },
+      "recordingRetention": {
+        "title": "録音の自動削除",
+        "description": "古い録音を自動的に削除して容量を節約",
+        "never": "しない",
+        "preserveLimit": "最新{{count}}件を保持",
+        "days3": "3日後",
+        "weeks2": "2週間後",
+        "months3": "3ヶ月後",
+        "placeholder": "保持期間を選択…"
+      },
+      "alwaysOnMicrophone": {
+        "label": "マイク常時オン",
+        "description": "より速い応答のためにマイクをアクティブに保つ"
+      },
+      "clamshellMicrophone": {
+        "title": "クラムシェルマイク",
+        "description": "ノートパソコンの蓋を閉じたときに使用するマイク"
+      },
+      "postProcessingToggle": {
+        "label": "後処理",
+        "description": "文字起こし後の AI によるテキスト改善を有効化"
+      },
+      "muteWhileRecording": {
+        "label": "録音中にミュート",
+        "description": "録音中にシステムオーディオをミュート"
+      },
+      "appendTrailingSpace": {
+        "label": "末尾にスペースを追加",
+        "description": "貼り付けた文字起こしの後にスペースを追加"
+      },
+      "keyboardImplementation": {
+        "title": "キーボード実装",
+        "description": "キーボードショートカットのバックエンドを選択してください。",
+        "bindingsReset": "キーボードショートカットに互換性がなかったため、デフォルトにリセットされました"
+      },
+      "pasteDelay": {
+        "title": "貼り付け遅延(前)",
+        "description": "テキストをコピーした後、貼り付けキーを送信する前の遅延(ミリ秒)。何も貼り付けられない場合は増やしてください。"
+      },
+      "pasteDelayAfter": {
+        "title": "貼り付け遅延(後)",
+        "description": "貼り付けキーを送信した後、以前のクリップボードを復元する前の遅延(ミリ秒)。文字起こしではなく古いクリップボードの内容が貼り付けられる場合は増やしてください。"
+      },
+      "reliablePaste": {
+        "title": "確実な貼り付け(Beta)",
+        "description": "固定の遅延ではなく、対象アプリが実際に文字起こしを読み取った後にのみクリップボードを復元します。システム負荷が高いときに古いクリップボードの内容が貼り付けられる問題を解決するための設定です。クリップボードを使う貼り付け方法が必要です。macOS と Windows のみ。"
+      },
+      "recordingBuffer": {
+        "title": "追加録音バッファ",
+        "description": "キーを離した後に録音を続ける追加時間(ミリ秒)。末尾の音声を捕捉するため。0 = 追加バッファなし。"
+      }
+    },
+    "about": {
+      "title": "概要",
+      "version": {
+        "title": "バージョン",
+        "description": "あのねんの現在のバージョン"
+      },
+      "appDataDirectory": {
+        "title": "アプリデータディレクトリ",
+        "description": "あのねんがデータを保存する場所"
+      },
+      "sourceCode": {
+        "title": "ソースコード",
+        "description": "ソースコードを見て貢献する",
+        "button": "GitHub で見る"
+      },
+      "acknowledgments": {
+        "title": "謝辞",
+        "whisper": {
+          "title": "Whisper.cpp",
+          "description": "OpenAIのWhisper自動音声認識モデルの高性能推論",
+          "details": "あのねんは高速でローカルな音声からテキストへの変換にWhisper.cppを使用しています。Georgi Gerganov氏と貢献者の皆様の素晴らしい仕事に感謝します。"
+        },
+        "handy": {
+          "title": "Handy",
+          "description": "オープンソースの音声テキスト変換デスクトップアプリケーション",
+          "details": "このアプリケーションはCJ Pais氏によるオープンソースプロジェクト「Handy」を基に構築されています。「Handy」はMITライセンスで公開されています。"
+        }
+      },
+      "legal": {
+        "title": "規約・法的表示",
+        "description": "プライバシーポリシーと特定商取引法に基づく表記。",
+        "privacy": "プライバシーポリシー",
+        "tokushoho": "特定商取引法に基づく表記",
+        "openFailed": "ページを開けませんでした"
+      }
+    },
+    "licenses": {
+      "title": "ライセンスと帰属",
+      "description": "このアプリに含まれる第三者ソフトウェアの著作権表示とライセンス条文",
+      "show": "全文を表示",
+      "hide": "閉じる"
+    },
+    "recording": {
+      "title": "録音",
+      "inputVolume": {
+        "title": "マイクの入力音量",
+        "description": "OS のサウンド設定と同じ値です（他のアプリの入力音量も変わります）。大きすぎると音が割れ、小さすぎると認識精度が落ちます。"
+      }
+    },
+    "recordingSound": {
+      "title": "録音開始音"
+    },
+    "historyRetention": {
+      "title": "履歴の保持",
+      "description": "文字起こしと録音音声を、この端末にどれだけ残すか。★を付けた行は「直近 20 件」でも削除されません。「直近 20 件」に切り替えると、★の無い古い行はその場で消えます。「ずっと」は文字を残し続けますが、録音は直近 100 件までです（★を付けた行と、転写に失敗した行の録音は残ります）。「今後は保持しない」は、これから先の文字も録音も残さないという意味です。すでに保存された履歴はそのまま残るので、消すときは履歴の「すべて削除」を使ってください。転写に失敗した録音も残らなくなるため、あとから再転写して取り戻すことができません。",
+      "options": {
+        "none": "今後は保持しない",
+        "recent": "直近 {{count}} 件",
+        "unlimited": "ずっと（録音は直近 100 件）"
+      },
+      "usage": {
+        "none": "端末に残っている録音はありません",
+        "underOneMb": "端末に残っている録音: {{count}} 件・1 MB 未満",
+        "megabytes": "端末に残っている録音: {{count}} 件・約 {{mb}} MB"
+      }
+    },
+    "revealHidden": {
+      "label": "隠し設定を表示",
+      "description": "このビルドで既定では隠している設定を再表示します。オンにすると、隠した設定をまとめて元に戻せます。"
+    },
+    "theme": {
+      "accentColor": "アクセントカラー",
+      "dark": "濃",
+      "light": "淡",
+      "mode": {
+        "label": "テーマ",
+        "system": "システム連動",
+        "light": "ライト",
+        "dark": "ダーク"
+      }
+    },
+    "fontScale": {
+      "label": "文字サイズ",
+      "description": "アプリ全体の文字と余白の大きさを変えます。Windows の「テキストのサイズ」はアプリの表示には反映されないため、こちらで設定してください。"
+    },
+    "support": {
+      "title": "フィードバック・お問い合わせ",
+      "intro": "不具合の報告やお問い合わせは、フォームから送れます。診断情報をコピーして貼ることもできます。",
+      "description": "診断情報に入るのは、日時とタイムゾーン・アプリと OS のバージョン・表示言語・モデルとマイクの名前・アカウント ID の先頭 8 文字・プランとご利用状況・直近のログです。音声と文字起こしは入りません。送る前に中身を確認できます。",
+      "openContact": "フォームを開く",
+      "copyDiagnostics": "診断情報をコピー",
+      "diagnosticsInfo": "診断情報に入るもの",
+      "diagnosticsCopied": "診断情報をコピーしました（日時とタイムゾーン・バージョン・OS・表示言語・モデルとマイクの名前・アカウント ID の先頭 8 文字・プランとご利用状況・直近のログ）",
+      "openFailed": "お問い合わせフォームを開けませんでした",
+      "copyFailed": "診断情報をコピーできませんでした"
+    },
+    "howto": {
+      "title": "使い方",
+      "whereItGoes": {
+        "label": "文字はどこに入るか",
+        "body": "そのとき使っているアプリの入力欄に入ります"
+      }
+    },
+    "resetAll": {
+      "button": "すべての設定をリセット",
+      "title": "設定のリセット",
+      "confirm": "すべての設定がデフォルトに戻ります。よろしいですか？"
+    },
+    "logs": {
+      "settingsTitle": "ログ設定",
+      "filter": {
+        "all": "すべて",
+        "timing": "処理時間",
+        "problems": "警告とエラー"
+      },
+      "autoRefresh": "自動更新",
+      "refresh": "更新",
+      "copy": "コピー",
+      "copied": "クリップボードにコピーしました",
+      "copyFailed": "コピーに失敗しました",
+      "empty": "ログはまだありません。文字起こしを実行してから更新してください。",
+      "showing": "末尾 {{total}} 行のうち {{shown}} 行を表示中"
+    }
+  },
+  "footer": {
+    "checkingUpdates": "アップデートを確認中…",
+    "updateAvailableShort": "アップデートあり",
+    "upToDate": "最新です",
+    "updateCheckingDisabled": "アップデート確認無効",
+    "downloading": "ダウンロード中… {{progress}}%",
+    "installing": "インストール中…",
+    "preparing": "準備中…",
+    "checkForUpdates": "アップデートを確認",
+    "portableUpdateTitle": "手動での更新が必要です",
+    "portableUpdateMessage": "ポータブル版は自動的に更新できません。下のボタンからお使いのシステム向けのインストーラーをダウンロードし、実行して同じフォルダーにインストールしてください。Data フォルダー(設定、モデル、録音)はそのまま残ります。",
+    "portableUpdateButton": "インストーラーをダウンロード",
+    "portableUpdateBrowseMessage": "ポータブル版は自動的に更新できません。GitHub Releases からお使いのシステム向けの最新版をダウンロードし、同じフォルダーにインストールしてください。Data フォルダー(設定、モデル、録音)はそのまま残ります。",
+    "portableUpdateBrowseButton": "GitHub Releases を開く",
+    "downloadingModel": "{{model}}をダウンロード中...",
+    "updateAvailable": "アップデートあり: {{version}}",
+    "downloadUpdate": "アップデートをダウンロード",
+    "restart": "再起動"
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "delete": "削除",
+    "close": "閉じる",
+    "open": "開く",
+    "noOptionsFound": "オプションが見つかりません",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "reset": "リセット",
+    "add": "追加",
+    "remove": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "update": "更新",
+    "default": "デフォルト",
+    "enabled": "有効",
+    "disabled": "無効",
+    "on": "オン",
+    "off": "オフ",
+    "yes": "はい",
+    "no": "いいえ",
+    "downloading": "ダウンロード中...",
+    "downloadingCount": "{{count}} 件ダウンロード中..."
+  },
+  "accessibility": {
+    "permissionsDescription": "あのねんが文字起こしテキストを入力するには、アクセシビリティ権限が必要です。",
+    "openSettings": "システム設定を開く",
+    "permissionsRequired": "アクセシビリティ権限が必要です",
+    "dismiss": "閉じる"
+  },
+  "errors": {
+    "notice": {
+      "seal_unavailable": "安全に送れる状態を確認できませんでした（音声は送っていません）",
+      "seal_outdated": "このアプリでは、いまのサーバーを確認できません。アプリを最新版に更新してください（音声は送っていません）",
+      "seal_failed": "音声を保護できなかったため、送信を中止しました",
+      "seal_key_lost": "サーバーに送り直せませんでした。もう一度お試しください（音声は保護して送りました）",
+      "seal_outdated_after_send": "このアプリでは、いまのサーバーを確認できません。アプリを最新版に更新してください（音声は保護して送りました）",
+      "seal_response_broken": "保護された応答を受け取れませんでした。時間をおいて試してください（音声は保護して送りました）",
+      "seal_refused": "サーバーが、保護された送信として受け付けませんでした。時間をおいて試してください（音声は保護して送りました）",
+      "plaintext_refused": "サーバーが、保護されていない送信を受け付けませんでした",
+      "auth_failed": "認証に失敗しました。再度サインインしてください"
+    },
+    "loadDirectory": "ディレクトリの読み込みエラー: {{error}}",
+    "micPermissionDeniedTitle": "マイクへのアクセスが拒否されました",
+    "micPermissionDenied": {
+      "generic": "オペレーティングシステムによりマイクへのアクセスが拒否されました。システム設定でマイクの許可を付与してください。",
+      "windows": "設定 → プライバシーとセキュリティ → マイク(デスクトップアプリのアクセスを含む)でマイクへのアクセスを有効にしてください。",
+      "macos": "システム設定 → プライバシーとセキュリティ → マイクでマイクへのアクセスを許可してください。",
+      "linux": "システムのサウンドまたはプライバシー設定でマイクへのアクセスを許可してください。"
+    },
+    "noInputDeviceTitle": "マイクが見つかりません",
+    "noInputDevice": "オーディオ入力デバイスが検出されませんでした。マイクまたはヘッドセットを接続してから再試行してください。",
+    "recordingFailed": "録音の開始に失敗しました。もう一度お試しください。",
+    "modelLoadFailed": "モデル「{{model}}」の読み込みに失敗しました。",
+    "modelLoadFailedUnknown": "不明なモデル",
+    "pasteFailedTitle": "テキストの貼り付けに失敗しました",
+    "pasteFailed": "アクティブなアプリにテキストを貼り付けられませんでした。",
+    "transcriptionFailedTitle": "文字起こしに失敗しました",
+    "notSignedInTitle": "ログインが必要です",
+    "notSignedIn": "文字起こしを使用するにはログインしてください。",
+    "noActiveSubscriptionTitle": "契約が必要です",
+    "noActiveSubscription": "文字起こしを使用するには有効な契約が必要です。",
+    "noModelSelectedTitle": "モデルが選ばれていません",
+    "noModelSelected": "設定 → モデルで、使うモデルを選んでください。",
+    "networkUnavailableTitle": "ネットワークに接続できません",
+    "networkUnavailable": "インターネット接続を確認してください。接続が回復したら再度お試しください。",
+    "networkTranscriptionFailed": "ネットワーク接続が切れたため文字起こしに失敗しました。音声は保存済みです。接続を確認してもう一度お試しください。",
+    "networkTranscriptionFailedNotSaved": "ネットワーク接続が切れたため文字起こしに失敗しました。この録音は残っていません。接続を確認して、もう一度録音してください。",
+    "modelLoadFailedDescription": "もう一度お試しください。問題が続く場合はアプリを再起動してください。",
+    "gpuFallbackTitle": "CPU で処理します",
+    "gpuFallbackVram": "このモデルには約 {{needed}} MB のグラフィックメモリが要りますが、空きが {{available}} MB しかないため CPU で処理します。転写は遅くなります。",
+    "gpuFallbackAfterCrash": "前回、グラフィックボードを使っている最中にアプリが終了したため、今回は CPU で処理します。転写は遅くなります。次にアプリを起動すると、またグラフィックボードを使います。",
+    "modelDownloadFailed": "モデルのダウンロードに失敗しました。ネットワーク接続を確認してもう一度お試しください。",
+    "transcriptionFailed": "文字起こしに失敗しました。もう一度お試しください。"
+  },
+  "appLanguage": {
+    "title": "アプリの言語",
+    "description": "あのねんインターフェースの言語を変更"
+  },
+  "overlay": {
+    "transcribing": "文字起こし中…",
+    "processing": "処理中…",
+    "preparing": "初回準備中...",
+    "lowVolume": "音量が低い",
+    "limitWarning": "まもなく自動停止"
+  },
+  "app": {
+    "name": "あのねん"
+  },
+  "authOnboarding": {
+    "title": "サインイン",
+    "checkingSubscription": "契約状態を確認中...",
+    "noAccountGuide": "アカウントをお持ちでない方は anonen.net で登録・契約してください",
+    "noSubscription": "有効な契約がありません。anonen.net でご契約ください。",
+    "subscriptionCheckFailed": "契約を確認できませんでした。しばらくしてから「再確認」を押してください。",
+    "retrySubscription": "再確認",
+    "switchAccount": "別のアカウントを使用",
+    "viewHistory": "転写履歴を見る"
+  },
+  "anonenCloud": {
+    "title": "あのねん",
+    "signInPrompt": "あのねんを使うにはサインインしてください。6桁のコードをメールでお送りします。",
+    "emailPlaceholder": "you@example.com",
+    "otpPlaceholder": "6桁のコード",
+    "sendOtp": "コードを送信",
+    "resendOtp": "再送信",
+    "resendCooldown": "再送信 ({{seconds}}秒)",
+    "retryCaptcha": "セキュリティ確認を再読み込み",
+    "captchaFrameTitle": "セキュリティ確認",
+    "verify": "サインイン",
+    "back": "戻る",
+    "logout": "サインアウト",
+    "signedIn": "サインイン済み",
+    "signedInAs": "{{email}} でサインイン中",
+    "usageSection": "利用量",
+    "weekly": "今週",
+    "monthly": "今月",
+    "weekResets": "{{when}} にリセット（日本時間）",
+    "monthResets": "{{when}} の請求日にリセット（日本時間）",
+    "subscriptionStatus": "契約状態: {{status}}",
+    "subscriptionStatuses": {
+      "trialing": "無料トライアル中（週上限は通常の半分）",
+      "active": "契約中",
+      "past_due": "お支払いの確認中",
+      "canceled": "解約済み",
+      "unpaid": "お支払いエラー（利用停止中）",
+      "incomplete": "お手続きが完了していません",
+      "incomplete_expired": "お手続きの期限が切れました",
+      "paused": "一時停止中"
+    },
+    "pastDueWarning": "決済にエラーが発生しています。放置すると契約が終了します。anonen.net のアカウントページからカード情報を更新してください。",
+    "noUsageYet": "利用量データはまだありません。文字起こしを実行するか更新してください。",
+    "refresh": "更新",
+    "errors": {
+      "emailRequired": "先にメールアドレスを入力してください。",
+      "emailInvalid": "正しいメールアドレスを入力してください。",
+      "captchaRequired": "確認コードを送る前にセキュリティ確認を完了してください。",
+      "captchaUnavailable": "セキュリティ確認を読み込めませんでした。通信を確認してもう一度お試しください。",
+      "tokenRequired": "メールに届いた6桁のコードを入力してください。",
+      "rateLimited": "しばらくしてからもう一度お試しください（60秒に1回まで）",
+      "otpRequestFailed": "認証コードの送信に失敗しました。しばらくしてからもう一度お試しください。",
+      "verifyFailed": "認証コードの確認に失敗しました。コードを確認してもう一度お試しください。",
+      "sessionEnded": "サインインの状態が解除されています。もう一度サインインしてください。",
+      "usageRefreshFailed": "利用状況の取得に失敗しました。しばらくしてからもう一度お試しください。"
+    },
+    "toast": {
+      "subscriptionRequired": "あのねん: 契約が必要です",
+      "subscriptionGuide": "有効な契約がありません。anonen.net でご契約ください。",
+      "capReached": "あのねん: {{which}}の上限に達しました",
+      "capWindow": {
+        "week": "週間",
+        "month": "月間",
+        "unknown": "利用量"
+      },
+      "capResetsAt": "遅くとも {{when}} までにリセットされます（日本時間）。",
+      "capWait": "上限がリセットされるまでお待ちください。",
+      "capSuspended": "あのねん: クラウドの利用が一時停止されています",
+      "capSuspendedWait": "再開までお待ちください。",
+      "capResumesAt": "遅くとも {{when}} までに再開します（日本時間）。",
+      "capLocalGuide": "設定からローカルモデルに切り替えると続けられます。",
+      "capRecordingKept": "今の録音は履歴に残っているので、履歴から再転写できます。",
+      "capRecordingNotKept": "今の録音は残っていません。",
+      "lowRemaining": "あのねん: 残り時間が少なくなっています",
+      "lowRemainingDetail": "上限までの残りは約 {{remaining}} です。",
+      "switched": "{{target}} に切り替えました",
+      "switchFailed": "{{target}} への切り替えに失敗しました",
+      "modelRetired": "このモデルは提供終了しました。新しいモデルを選んでください",
+      "modelRetiredSwitch": "おすすめモデルに切り替える",
+      "noRecommendedModel": "おすすめモデルが見つかりません。設定 → モデルから選択してください。",
+      "logoutFailed": "サインアウトに失敗しました。もう一度お試しください。",
+      "audioTooLong": "録音が1回あたりの上限を超えています",
+      "audioTooLongGuide": "録音は履歴に残っています。履歴からローカルモデルで再転写できます。",
+      "audioTooLongGuideNotSaved": "この録音は残っていません。短く区切って、もう一度録音してください。"
+    },
+    "longWindowBinds": "直近 28 日の上限が先に当たります（残り {{remaining}}）",
+    "remainingPercent": "残り {{percent}}%",
+    "trialCapNote": "お試し中に使えるのはここまで。契約すると全部使えます"
+  },
+  "modelDataPolicy": {
+    "intro": "このモデルを選ぶと、録音した音声は次の提供元へ送られます。",
+    "introCurrent": "このモデルは選択中で、録音した音声は次の提供元へ送られています。いまの音声の扱いには、まだ同意していません。「このモデルを使う」を押さずに閉じると、選択を外します。",
+    "destination": "音声の送り先",
+    "trainingLabel": "学習への利用",
+    "retentionLabel": "提供元での保存",
+    "unknown": "確かめていません",
+    "unknownNote": "アプリが提供元の方針を取得できていません。通信できる状態でしばらく待つと最新の内容に更新されます。",
+    "seePolicy": "この内容はプライバシーポリシーにも出典つきで書いています。あとから設定でいつでも確認できます。",
+    "cancel": "やめる",
+    "accept": "このモデルを使う",
+    "training": {
+      "no": "使われません",
+      "optOut": "使われません（当方が学習への提供を無効にしています）",
+      "yes": "使われます"
+    },
+    "retention": {
+      "none": "保存されません",
+      "days": "{{days}} 日間保持されたのち削除されます",
+      "unspecified": "いつ削除するかの定めがありません"
+    },
+    "localOnly": "該当しません（音声はこの PC から出ません）",
+    "languages": "対応言語",
+    "translation": "翻訳",
+    "usage": "枠の減り方"
+  },
+  "linuxShortcut": {
+    "title": "ショートカットがまだ使えません",
+    "body": "キー入力を読む権限が、このセッションにまだ渡っていません。一度アプリを終了して開き直してください。それでも直らないときは、ログアウトして入り直してください。"
+  },
+  "micClipping": {
+    "title": "マイクの音が割れています",
+    "body": "入力音量が大きすぎて、音が潰れています。録音より前の段階で起きているので、あとからは直せません。入力音量を下げて、もう一度録音して確かめてください。"
+  }
+}

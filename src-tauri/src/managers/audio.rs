@@ -1,0 +1,794 @@
+use crate::audio_toolkit::{
+    list_input_devices, vad::SmoothedVad, AudioRecorder, InputLevel, SileroVad,
+};
+use crate::helpers::clamshell;
+use crate::settings::{get_settings, write_settings, AppSettings};
+use crate::utils;
+use log::{debug, error, info, trace, warn};
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use tauri::{Emitter, Manager};
+
+const STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn set_mute(mute: bool) {
+    #[cfg(target_os = "windows")]
+    {
+        unsafe {
+            use windows::Win32::{
+                Media::Audio::{
+                    eMultimedia, eRender, Endpoints::IAudioEndpointVolume, IMMDeviceEnumerator,
+                    MMDeviceEnumerator,
+                },
+                System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED},
+            };
+
+            macro_rules! unwrap_or_return {
+                ($expr:expr) => {
+                    match $expr {
+                        Ok(val) => val,
+                        Err(_) => return,
+                    }
+                };
+            }
+
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+
+            let all_devices: IMMDeviceEnumerator =
+                unwrap_or_return!(CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL));
+            let default_device =
+                unwrap_or_return!(all_devices.GetDefaultAudioEndpoint(eRender, eMultimedia));
+            let volume_interface = unwrap_or_return!(
+                default_device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
+            );
+
+            let _ = volume_interface.SetMute(mute, std::ptr::null());
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+
+        let mute_val = if mute { "1" } else { "0" };
+        let amixer_state = if mute { "mute" } else { "unmute" };
+
+        if Command::new("wpctl")
+            .args(["set-mute", "@DEFAULT_AUDIO_SINK@", mute_val])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return;
+        }
+
+        if Command::new("pactl")
+            .args(["set-sink-mute", "@DEFAULT_SINK@", mute_val])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return;
+        }
+
+        let _ = Command::new("amixer")
+            .args(["set", "Master", amixer_state])
+            .output();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let script = format!(
+            "set volume output muted {}",
+            if mute { "true" } else { "false" }
+        );
+        let _ = Command::new("osascript").args(["-e", &script]).output();
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn get_mute() -> Option<bool> {
+    unsafe {
+        use windows::Win32::{
+            Media::Audio::{
+                eMultimedia, eRender, Endpoints::IAudioEndpointVolume, IMMDeviceEnumerator,
+                MMDeviceEnumerator,
+            },
+            System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED},
+        };
+
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+
+        let all_devices: IMMDeviceEnumerator =
+            CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+        let default_device = all_devices
+            .GetDefaultAudioEndpoint(eRender, eMultimedia)
+            .ok()?;
+        let volume_interface = default_device
+            .Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
+            .ok()?;
+
+        Some(volume_interface.GetMute().ok()?.as_bool())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_mute() -> Option<bool> {
+    use std::process::Command;
+
+    if let Ok(out) = Command::new("wpctl")
+        .args(["get-volume", "@DEFAULT_AUDIO_SINK@"])
+        .output()
+    {
+        if out.status.success() {
+            return Some(String::from_utf8_lossy(&out.stdout).contains("[MUTED]"));
+        }
+    }
+
+    if let Ok(out) = Command::new("pactl")
+        .env("LC_ALL", "C")
+        .args(["get-sink-mute", "@DEFAULT_SINK@"])
+        .output()
+    {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout).to_lowercase();
+            if s.contains("yes") {
+                return Some(true);
+            }
+            if s.contains("no") {
+                return Some(false);
+            }
+        }
+    }
+
+    if let Ok(out) = Command::new("amixer")
+        .env("LC_ALL", "C")
+        .args(["get", "Master"])
+        .output()
+    {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            if s.contains("[off]") {
+                return Some(true);
+            }
+            if s.contains("[on]") {
+                return Some(false);
+            }
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn get_mute() -> Option<bool> {
+    use std::process::Command;
+
+    let out = Command::new("osascript")
+        .args(["-e", "output muted of (get volume settings)"])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    match String::from_utf8_lossy(&out.stdout).trim() {
+        "true" => Some(true),
+        "false" => Some(false),
+        _ => None,
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+fn get_mute() -> Option<bool> {
+    None
+}
+
+fn restore_mute(prev_muted: Option<bool>) {
+    if prev_muted != Some(true) {
+        set_mute(false);
+    }
+}
+
+const WHISPER_SAMPLE_RATE: usize = 16000;
+
+#[derive(Clone, Debug)]
+pub enum RecordingState {
+    Idle,
+    Recording { binding_id: String },
+}
+
+#[derive(Clone, Debug)]
+pub enum MicrophoneMode {
+    AlwaysOn,
+    OnDemand,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct MuteState {
+    did_mute: bool,
+    prev_muted: Option<bool>,
+}
+
+enum DesiredMicrophone {
+    Default,
+    Selected(String),
+    Clamshell(String),
+}
+
+struct MicrophoneResolution {
+    device: Option<cpal::Device>,
+    unavailable_selected_microphone: Option<String>,
+}
+
+fn create_audio_recorder(
+    vad_path: &Path,
+    app_handle: &tauri::AppHandle,
+    selected_channel: Option<u16>,
+) -> Result<AudioRecorder, anyhow::Error> {
+    let silero = SileroVad::new(vad_path, 0.3)
+        .map_err(|e| anyhow::anyhow!("Failed to create SileroVad: {}", e))?;
+    let smoothed_vad = SmoothedVad::new(Box::new(silero), 15, 15, 2);
+
+    let recorder = AudioRecorder::new()
+        .map_err(|e| anyhow::anyhow!("Failed to create AudioRecorder: {}", e))?
+        .with_vad(Box::new(smoothed_vad))
+        .with_selected_channel(selected_channel)
+        .with_level_callback({
+            let app_handle = app_handle.clone();
+            move |levels| {
+                utils::emit_levels(&app_handle, &levels);
+            }
+        });
+
+    Ok(recorder)
+}
+
+#[derive(Clone)]
+pub struct AudioRecordingManager {
+    state: Arc<Mutex<RecordingState>>,
+    mode: Arc<Mutex<MicrophoneMode>>,
+    app_handle: tauri::AppHandle,
+
+    recorder: Arc<Mutex<Option<AudioRecorder>>>,
+    is_open: Arc<Mutex<bool>>,
+    is_recording: Arc<Mutex<bool>>,
+    mute_state: Arc<Mutex<MuteState>>,
+    close_generation: Arc<AtomicU64>,
+
+    last_input_level: Arc<Mutex<Option<InputLevel>>>,
+
+    recording_active: Arc<AtomicBool>,
+
+    cached_device: Arc<Mutex<Option<(String, cpal::Device)>>>,
+}
+
+impl AudioRecordingManager {
+    pub fn new(app: &tauri::AppHandle) -> Result<Self, anyhow::Error> {
+        let settings = get_settings(app);
+        let mode = if settings.always_on_microphone {
+            MicrophoneMode::AlwaysOn
+        } else {
+            MicrophoneMode::OnDemand
+        };
+
+        let manager = Self {
+            state: Arc::new(Mutex::new(RecordingState::Idle)),
+            mode: Arc::new(Mutex::new(mode.clone())),
+            app_handle: app.clone(),
+
+            recorder: Arc::new(Mutex::new(None)),
+            is_open: Arc::new(Mutex::new(false)),
+            is_recording: Arc::new(Mutex::new(false)),
+            mute_state: Arc::new(Mutex::new(MuteState::default())),
+            close_generation: Arc::new(AtomicU64::new(0)),
+            last_input_level: Arc::new(Mutex::new(None)),
+            recording_active: Arc::new(AtomicBool::new(false)),
+            cached_device: Arc::new(Mutex::new(None)),
+        };
+
+        if matches!(mode, MicrophoneMode::AlwaysOn) {
+            manager.start_microphone_stream()?;
+        }
+
+        Ok(manager)
+    }
+
+    fn desired_microphone(&self, settings: &AppSettings) -> DesiredMicrophone {
+        if let Some(clamshell_microphone) = &settings.clamshell_microphone {
+            let clamshell_started = Instant::now();
+            let is_clamshell = clamshell::is_clamshell().unwrap_or(false);
+            debug!(
+                "device resolve: clamshell_check={:?} (clamshell={})",
+                clamshell_started.elapsed(),
+                is_clamshell
+            );
+            if is_clamshell {
+                return DesiredMicrophone::Clamshell(clamshell_microphone.clone());
+            }
+        }
+        match &settings.selected_microphone {
+            Some(name) => DesiredMicrophone::Selected(name.clone()),
+            None => DesiredMicrophone::Default,
+        }
+    }
+
+    pub fn invalidate_device_cache(&self) {
+        *self.cached_device.lock().unwrap() = None;
+    }
+
+    fn resolve_microphone_device(&self, settings: &AppSettings) -> MicrophoneResolution {
+        let (device_name, selected_microphone) = match self.desired_microphone(settings) {
+            DesiredMicrophone::Default => {
+                debug!("device resolve: no mic configured -> system default");
+                return MicrophoneResolution {
+                    device: None,
+                    unavailable_selected_microphone: None,
+                };
+            }
+            DesiredMicrophone::Selected(name) => (name.clone(), Some(name)),
+            DesiredMicrophone::Clamshell(name) => (name, None),
+        };
+
+        if let Some((cached_name, device)) = self.cached_device.lock().unwrap().as_ref() {
+            if *cached_name == device_name {
+                debug!("device resolve: cache hit for '{device_name}'");
+                return MicrophoneResolution {
+                    device: Some(device.clone()),
+                    unavailable_selected_microphone: None,
+                };
+            }
+        }
+
+        let enumerate_started = Instant::now();
+        let (device, enumeration_succeeded) = match list_input_devices() {
+            Ok(devices) => (
+                devices
+                    .into_iter()
+                    .find(|d| d.name == device_name)
+                    .map(|d| d.device),
+                true,
+            ),
+            Err(e) => {
+                debug!("Failed to list devices, using default: {}", e);
+                (None, false)
+            }
+        };
+        debug!(
+            "device resolve: enumerate={:?} (found={})",
+            enumerate_started.elapsed(),
+            device.is_some()
+        );
+        if let Some(d) = &device {
+            *self.cached_device.lock().unwrap() = Some((device_name, d.clone()));
+        }
+
+        let unavailable_selected_microphone = if enumeration_succeeded && device.is_none() {
+            selected_microphone
+        } else {
+            None
+        };
+        MicrophoneResolution {
+            device,
+            unavailable_selected_microphone,
+        }
+    }
+
+    fn persist_default_microphone_after_fallback(&self, unavailable_name: &str) {
+        let mut settings = get_settings(&self.app_handle);
+        if settings.selected_microphone.as_deref() != Some(unavailable_name) {
+            return;
+        }
+
+        warn!(
+            "Selected microphone '{}' is gone; falling back to the system default",
+            unavailable_name
+        );
+        settings.selected_microphone = None;
+        write_settings(&self.app_handle, settings);
+        let _ = self.app_handle.emit(
+            "settings-changed",
+            serde_json::json!({
+                "setting": "selected_microphone",
+                "value": "Default"
+            }),
+        );
+    }
+
+    fn schedule_lazy_close(&self) {
+        let gen = self.close_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let app = self.app_handle.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(STREAM_IDLE_TIMEOUT);
+            let rm = app.state::<Arc<AudioRecordingManager>>();
+
+            let state = rm.state.lock().unwrap();
+            if rm.close_generation.load(Ordering::SeqCst) == gen
+                && matches!(*state, RecordingState::Idle)
+            {
+                info!(
+                    "Closing idle microphone stream after {:?}",
+                    STREAM_IDLE_TIMEOUT
+                );
+                rm.stop_microphone_stream();
+            }
+        });
+    }
+
+    pub fn apply_mute(&self) {
+        let settings = get_settings(&self.app_handle);
+        if !settings.mute_while_recording {
+            return;
+        }
+
+        let is_open_guard = self.is_open.lock().unwrap();
+        if !*is_open_guard {
+            return;
+        }
+        let mut mute_guard = self.mute_state.lock().unwrap();
+
+        if mute_guard.did_mute {
+            return;
+        }
+        mute_guard.prev_muted = get_mute();
+        set_mute(true);
+        mute_guard.did_mute = true;
+        debug!("Mute applied (prev_muted={:?})", mute_guard.prev_muted);
+    }
+
+    pub fn remove_mute(&self) {
+        let mut mute_guard = self.mute_state.lock().unwrap();
+        if mute_guard.did_mute {
+            restore_mute(mute_guard.prev_muted);
+            mute_guard.did_mute = false;
+            debug!(
+                "Mute removed (restored prev_muted={:?})",
+                mute_guard.prev_muted
+            );
+        }
+    }
+
+    pub fn preload_vad(&self) -> Result<(), anyhow::Error> {
+        let mut recorder_opt = self.recorder.lock().unwrap();
+        if recorder_opt.is_none() {
+            let vad_path = self
+                .app_handle
+                .path()
+                .resolve(
+                    "resources/models/silero_vad_v4.onnx",
+                    tauri::path::BaseDirectory::Resource,
+                )
+                .map_err(|e| anyhow::anyhow!("Failed to resolve VAD path: {}", e))?;
+            let settings = get_settings(&self.app_handle);
+            *recorder_opt = Some(create_audio_recorder(
+                &vad_path,
+                &self.app_handle,
+                settings.selected_channel,
+            )?);
+        }
+        Ok(())
+    }
+
+    pub fn start_microphone_stream(&self) -> Result<(), anyhow::Error> {
+        let mut open_flag = self.is_open.lock().unwrap();
+        if *open_flag {
+            let needs_reopen = self
+                .recorder
+                .lock()
+                .unwrap()
+                .as_ref()
+                .is_some_and(|rec| rec.needs_reopen());
+
+            if !needs_reopen {
+                trace!("Microphone stream already active");
+                return Ok(());
+            }
+
+            warn!("Microphone stream is no longer running (device disconnected?); reopening");
+
+            {
+                let mut mute_guard = self.mute_state.lock().unwrap();
+                if mute_guard.did_mute {
+                    restore_mute(mute_guard.prev_muted);
+                    mute_guard.did_mute = false;
+                }
+            }
+            if let Some(rec) = self.recorder.lock().unwrap().as_mut() {
+                let _ = rec.close();
+            }
+            *self.is_recording.lock().unwrap() = false;
+            *open_flag = false;
+
+            self.invalidate_device_cache();
+        }
+
+        let start_time = Instant::now();
+
+        {
+            let mut mute_guard = self.mute_state.lock().unwrap();
+            if mute_guard.did_mute {
+                restore_mute(mute_guard.prev_muted);
+                mute_guard.did_mute = false;
+            }
+        }
+
+        let settings = get_settings(&self.app_handle);
+        let resolve_started = Instant::now();
+        let mut resolution = self.resolve_microphone_device(&settings);
+        let resolve_elapsed = resolve_started.elapsed();
+
+        let vad_started = Instant::now();
+        self.preload_vad()?;
+        let vad_elapsed = vad_started.elapsed();
+
+        let open_started = Instant::now();
+        let mut recorder_opt = self.recorder.lock().unwrap();
+        if let Some(rec) = recorder_opt.as_mut() {
+            if let Err(first_err) = rec.open(resolution.device.clone()) {
+                warn!("Recorder open failed ({first_err}); re-resolving device and retrying once");
+                self.invalidate_device_cache();
+                let fresh = self.resolve_microphone_device(&settings);
+                rec.open(fresh.device.clone())
+                    .map_err(|e| anyhow::anyhow!("Failed to open recorder: {}", e))?;
+
+                resolution = fresh;
+            }
+        }
+
+        drop(recorder_opt);
+        debug!(
+            "mic stream breakdown: device_resolve={resolve_elapsed:?} vad_ensure={vad_elapsed:?} open={:?}",
+            open_started.elapsed()
+        );
+
+        *open_flag = true;
+        if let Some(unavailable_name) = resolution.unavailable_selected_microphone {
+            self.persist_default_microphone_after_fallback(&unavailable_name);
+        }
+
+        info!(
+            "Microphone stream initialized in {:?}",
+            start_time.elapsed()
+        );
+        Ok(())
+    }
+
+    pub fn stop_microphone_stream(&self) {
+        let mut open_flag = self.is_open.lock().unwrap();
+        if !*open_flag {
+            return;
+        }
+
+        {
+            let mut mute_guard = self.mute_state.lock().unwrap();
+            if mute_guard.did_mute {
+                restore_mute(mute_guard.prev_muted);
+            }
+            mute_guard.did_mute = false;
+        }
+
+        if let Some(rec) = self.recorder.lock().unwrap().as_mut() {
+            if *self.is_recording.lock().unwrap() {
+                let _ = rec.stop();
+                *self.is_recording.lock().unwrap() = false;
+            }
+            let _ = rec.close();
+        }
+
+        *open_flag = false;
+        debug!("Microphone stream stopped");
+    }
+
+    pub fn update_mode(&self, new_mode: MicrophoneMode) -> Result<(), anyhow::Error> {
+        let cur_mode = self.mode.lock().unwrap().clone();
+
+        match (cur_mode, &new_mode) {
+            (MicrophoneMode::AlwaysOn, MicrophoneMode::OnDemand) => {
+                if matches!(*self.state.lock().unwrap(), RecordingState::Idle) {
+                    self.close_generation.fetch_add(1, Ordering::SeqCst);
+                    self.stop_microphone_stream();
+                }
+            }
+            (MicrophoneMode::OnDemand, MicrophoneMode::AlwaysOn) => {
+                self.close_generation.fetch_add(1, Ordering::SeqCst);
+                self.start_microphone_stream()?;
+            }
+            _ => {}
+        }
+
+        *self.mode.lock().unwrap() = new_mode;
+        Ok(())
+    }
+
+    fn set_state(&self, guard: &mut RecordingState, new_state: RecordingState) {
+        *guard = new_state;
+        self.recording_active.store(
+            matches!(*guard, RecordingState::Recording { .. }),
+            Ordering::SeqCst,
+        );
+    }
+
+    pub fn try_start_recording(&self, binding_id: &str) -> Result<(), String> {
+        let mut state = self.state.lock().unwrap();
+
+        if let RecordingState::Idle = *state {
+            self.close_generation.fetch_add(1, Ordering::SeqCst);
+
+            if let Err(e) = self.start_microphone_stream() {
+                let msg = format!("{e}");
+                error!("Failed to open microphone stream: {msg}");
+                return Err(msg);
+            }
+
+            if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                if rec.start().is_ok() {
+                    *self.is_recording.lock().unwrap() = true;
+                    self.set_state(
+                        &mut state,
+                        RecordingState::Recording {
+                            binding_id: binding_id.to_string(),
+                        },
+                    );
+                    debug!("Recording started for binding {binding_id}");
+                    return Ok(());
+                }
+            }
+            Err("Recorder not available".to_string())
+        } else {
+            Err("Already recording".to_string())
+        }
+    }
+
+    pub fn update_selected_device(&self) -> Result<(), anyhow::Error> {
+        self.invalidate_device_cache();
+
+        if *self.is_open.lock().unwrap() {
+            self.close_generation.fetch_add(1, Ordering::SeqCst);
+            self.stop_microphone_stream();
+            self.start_microphone_stream()?;
+        }
+        Ok(())
+    }
+
+    pub fn update_selected_channel(
+        &self,
+        selected_channel: Option<u16>,
+    ) -> Result<(), anyhow::Error> {
+        let state = self.state.lock().unwrap();
+        if !matches!(*state, RecordingState::Idle) {
+            return Err(anyhow::anyhow!(
+                "Cannot change the input channel while recording"
+            ));
+        }
+
+        let previous_channel = get_settings(&self.app_handle).selected_channel;
+        let was_open = *self.is_open.lock().unwrap();
+        if was_open {
+            self.close_generation.fetch_add(1, Ordering::SeqCst);
+            self.stop_microphone_stream();
+        }
+        if let Some(recorder) = self.recorder.lock().unwrap().as_mut() {
+            recorder.set_selected_channel(selected_channel);
+        }
+        if was_open {
+            if let Err(error) = self.start_microphone_stream() {
+                if let Some(recorder) = self.recorder.lock().unwrap().as_mut() {
+                    recorder.set_selected_channel(previous_channel);
+                }
+                return Err(error);
+            }
+        }
+        drop(state);
+        Ok(())
+    }
+
+    pub fn stop_recording(&self, binding_id: &str) -> Option<Vec<f32>> {
+        let mut state = self.state.lock().unwrap();
+
+        match *state {
+            RecordingState::Recording {
+                binding_id: ref active,
+            } if active == binding_id => {
+                self.set_state(&mut state, RecordingState::Idle);
+                drop(state);
+
+                let settings = get_settings(&self.app_handle);
+                if settings.extra_recording_buffer_ms > 0 {
+                    debug!(
+                        "Extra recording buffer: sleeping {}ms before stopping",
+                        settings.extra_recording_buffer_ms
+                    );
+                    std::thread::sleep(Duration::from_millis(settings.extra_recording_buffer_ms));
+                }
+
+                let (samples, level) = if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                    match rec.stop() {
+                        Ok((buf, level)) => (buf, level),
+                        Err(e) => {
+                            error!("stop() failed: {e}");
+                            (Vec::new(), InputLevel::default())
+                        }
+                    }
+                } else {
+                    error!("Recorder not available");
+                    (Vec::new(), InputLevel::default())
+                };
+                let input_rms = level.rms;
+
+                let mut samples = samples;
+                let gain = crate::audio_toolkit::normalize_quiet_audio(&mut samples);
+                if gain > 1.0 {
+                    info!("[mic] quiet recording boosted x{:.2}", gain);
+                }
+
+                info!(
+                    "Recording input RMS: {:.6} ({:.1} dB)",
+                    input_rms,
+                    if input_rms > 0.0 {
+                        20.0 * input_rms.log10()
+                    } else {
+                        f32::NEG_INFINITY
+                    }
+                );
+                *self.last_input_level.lock().unwrap() = Some(level);
+
+                *self.is_recording.lock().unwrap() = false;
+
+                if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
+                    if get_settings(&self.app_handle).lazy_stream_close {
+                        self.schedule_lazy_close();
+                    } else {
+                        self.stop_microphone_stream();
+                    }
+                }
+
+                let s_len = samples.len();
+
+                if s_len < WHISPER_SAMPLE_RATE && s_len > 0 {
+                    let mut padded = samples;
+                    padded.resize(WHISPER_SAMPLE_RATE * 5 / 4, 0.0);
+                    Some(padded)
+                } else {
+                    Some(samples)
+                }
+            }
+            _ => None,
+        }
+    }
+    pub fn last_input_rms(&self) -> Option<f32> {
+        self.last_input_level.lock().unwrap().map(|l| l.rms)
+    }
+
+    pub fn last_input_level(&self) -> Option<InputLevel> {
+        *self.last_input_level.lock().unwrap()
+    }
+
+    pub fn is_recording(&self) -> bool {
+        self.recording_active.load(Ordering::SeqCst)
+    }
+
+    pub fn cancel_recording(&self) {
+        let mut state = self.state.lock().unwrap();
+
+        if let RecordingState::Recording { .. } = *state {
+            self.set_state(&mut state, RecordingState::Idle);
+            drop(state);
+
+            if let Some(rec) = self.recorder.lock().unwrap().as_ref() {
+                let _ = rec.stop();
+            }
+
+            *self.is_recording.lock().unwrap() = false;
+
+            if matches!(*self.mode.lock().unwrap(), MicrophoneMode::OnDemand) {
+                if get_settings(&self.app_handle).lazy_stream_close {
+                    self.schedule_lazy_close();
+                } else {
+                    self.stop_microphone_stream();
+                }
+            }
+        }
+    }
+}

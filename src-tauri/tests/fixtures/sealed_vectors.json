@@ -1,0 +1,30 @@
+{
+  "note": "秘密鍵は使い捨てで本番 enclave の鍵ではない。",
+  "suite": "HPKE-X25519-HKDF-SHA256-CHACHA20POLY1305",
+  "content_type": "application/vnd.anonen.sealed",
+  "transcribe_info": "anonen/transcribe/v1",
+  "response_aad": "anonen/response/v1",
+  "enclave_private_key_hex": "0f31c12dd8d24112c28a119532f1ff3dddd1631e97d3fd0c6b38ad93d19a771b",
+  "enclave_public_key_hex": "a8b177ea7e1368f0d87ec680d87c860ca1a1d31032ad4d37f0b4eaca2558bd42",
+  "enclave_public_key_b64url": "qLF36n4TaPDYfsaA2HyGDKGh0xAyrU038LTqyiVYvUI",
+  "key_id_hex": "df0718b5f7cac1bc0c30f3cb0d458683",
+  "bound_nonce": {
+    "client_nonce": "wtxr71MT7UcNfSLBNJwayvncNwQArqQD",
+    "expected": "niPMeti7hiLxsLZNCIfyZ2K1hivGaRPREp2QTsqB7kQ"
+  },
+  "sealed_request": {
+    "hex": "414e4f4e31df0718b5f7cac1bc0c30f3cb0d458683e09687a572553968eca55263340e39eb7e8de539c58f4e3dc1586620f8e25e2403bdd351a6737559f3bde41d0a88b494e5438ce053ce16121b666b0a1494d9dbd80c74618b2769a258742c2c3d169cd8dd5c6598dc69fabaafc4dfec20bc49efcd30bf84d88c94c55b48d473f3144c9552a60a7bedd63a97e3ce8b3d2690cc4cf1cad61bf8e1217983cd4c4a9210382e6664c5caad7d86eab728f0c34a9d90e779eef4c110f5c545e16ad98e3645b5cce440ee435ca6fe6805c3d468c76d06955a528617775137227d5e49c45d94e7b040cbf935646886db7c2d549dca0cf7ece6238d20bd8297100356e0a479ea893ad4145477e58dbff9e73f6dcb6cc58fb0febe277dc5dfe2c07107b2174b328debe8",
+    "header": {
+      "request_id": "6f1d2c48-7a3e-4b91-8c05-2d9e7f4a1b60",
+      "response_key": "b5vPKkyfdIfQ5_yYp6v43yyi1mZyzcEZ3acqEed8Dlw",
+      "model": "openai/whisper-1",
+      "language": "ja"
+    },
+    "audio_hex": "52494646000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b"
+  },
+  "sealed_response": {
+    "response_key_hex": "6f9bcf2a4c9f7487d0e7fc98a7abf8df2ca2d66672cdc119dda72a11e77c0e5c",
+    "hex": "e37329621b8e48c87ba677b5a84a79d324922fe4ec9b9fafc133cbe698c24c1bee3cab6bcab7747dfb4a5198112a7aeec2809d2fbd5376c82c994b7b1021b7f341750ba50553b9c5ae137c22376f553f6c423158da7e69ba6f1bfe8848e6f62dafc2116675797a5bddc51d3264c40996d3a938dce1cb9b4483927f26e0b844b10709ec76a867f62ca94861d0eaf54d02eca934a2cdf1a0dd62481a42af147548e49b15cc08537055ed60a3d13a0ae09858",
+    "payload_utf8": "{\"text\": \"封を開けた側だけが読める\", \"duration_s\": 2, \"usage\": {\"week_used_s\": 673, \"week_cap_s\": 18000}, \"models_version\": \"2026-08-16\"}"
+  }
+}

@@ -1,0 +1,19 @@
+export { GeneralSettings } from "./general/GeneralSettings";
+export { HistorySettings } from "./history/HistorySettings";
+export { ModelsSettings } from "./models/ModelsSettings";
+export { HowToSettings } from "./howto/HowToSettings";
+
+export { MicrophoneSelector } from "./MicrophoneSelector";
+export { ChannelSelector } from "./ChannelSelector";
+export { OutputDeviceSelector } from "./OutputDeviceSelector";
+export { AudioFeedback } from "./AudioFeedback";
+export { ShowOverlay } from "./ShowOverlay";
+export { GlobalShortcutInput } from "./GlobalShortcutInput";
+export { HandyKeysShortcutInput } from "./HandyKeysShortcutInput";
+export { ShortcutInput } from "./ShortcutInput";
+export { TranslateToEnglish } from "./TranslateToEnglish";
+export { FillerWordRemoval } from "./FillerWordRemoval";
+export { StartHidden } from "./StartHidden";
+export { HistoryRetentionSelector } from "./HistoryRetention";
+export { AutostartToggle } from "./AutostartToggle";
+export { UpdateChecksToggle } from "./UpdateChecksToggle";

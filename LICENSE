@@ -1,0 +1,48 @@
+Copyright (c) 2026 ANONEN
+
+All rights reserved.
+
+PURPOSE
+
+This source code is published for one purpose: so that anyone can
+independently verify that the published binaries correspond to the source
+shown here.
+
+WHAT YOU MAY DO
+
+You may obtain, copy and store this source code, and build it locally,
+solely to carry out that verification.
+
+WHAT YOU MAY NOT DO
+
+Everything else. In particular, no permission is granted to redistribute
+this source code or any modified version of it, to distribute binaries
+built from it, to incorporate it or any part of it into another work, or to
+use it to provide a service to yourself or to others.
+
+THIRD-PARTY COMPONENTS
+
+Portions of this software are derived from third-party works and remain
+governed by their own licenses, which grant broader rights than this file
+does. See NOTICE.md and THIRD-PARTY-NOTICES.md.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+THE APPLICATION AND THE SERVICE
+
+This file governs this source code only. Use of the ANONEN application and
+the ANONEN service is governed separately by the terms published at
+https://anonen.net/legal/terms .
+
+APPLICABLE LAW
+
+Where applicable law expressly permits an act notwithstanding the above,
+that law prevails.

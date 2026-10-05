@@ -1,0 +1,86 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Anonen",
+  "mainBinaryName": "anonen",
+  "version": "1.0.115",
+  "identifier": "net.anonen.app",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self' customprotocol: asset:; base-uri 'self'; object-src 'none'; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; frame-src https://anonen.net; frame-ancestors 'self'; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+      "devCsp": "default-src 'self' customprotocol: asset:; base-uri 'self'; object-src 'none'; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420; font-src 'self' data:; frame-src https://anonen.net; frame-ancestors 'self'; img-src 'self' asset: http://asset.localhost blob: data:; media-src 'self' asset: http://asset.localhost blob:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["$APPDATA/recordings/**", "$APPDATA/recordings/**/*"],
+          "requireLiteralLeadingDot": false
+        }
+      }
+    }
+  },
+  "bundle": {
+    "publisher": "ANONEN",
+    "homepage": "https://anonen.net",
+    "copyright": "Copyright (c) 2026 ANONEN",
+    "shortDescription": "Anonen - speech-to-text",
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "resources": ["resources/**/*"],
+    "license": "LicenseRef-ANONEN",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "files": {},
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": "-",
+      "entitlements": "Entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "postInstallScript": "linux/postinst.sh",
+        "depends": ["libgtk-layer-shell0"],
+        "files": {
+          "/usr/lib/udev/rules.d/70-anonen-input.rules": "linux/70-anonen-input.rules",
+          "/usr/lib/modules-load.d/anonen-uinput.conf": "linux/anonen-uinput.conf"
+        }
+      },
+      "rpm": {
+        "compression": {
+          "type": "none"
+        }
+      },
+      "appimage": {
+        "bundleMediaFramework": true,
+        "files": {}
+      }
+    },
+    "windows": {
+      "nsis": {
+        "template": "nsis/installer.nsi",
+        "languages": ["Japanese"]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhCNTFBNTQyQjYyNUM2MTgKUldRWXhpVzJRcVZSaXlrY25teXpaWnRGMTZwRHFiYWhidW02NzJRMzN1Q0RLdGhwQmhETjJQL2EK",
+      "endpoints": [
+        "https://github.com/anonen-net/anonen-desktop/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

@@ -1,0 +1,720 @@
+mod actions;
+mod audio_feedback;
+pub mod audio_toolkit;
+pub mod cli;
+mod clipboard;
+mod cloud_failure;
+mod commands;
+mod gpu_guard;
+mod helpers;
+mod input;
+#[cfg(test)]
+mod ipc_origin_tests;
+mod managers;
+mod model_data_policy;
+mod native_log;
+mod overlay;
+mod paste_tx;
+pub mod portable;
+mod remote_asr;
+pub mod sealed;
+mod settings;
+mod shortcut;
+mod signal_handle;
+mod transcription_coordinator;
+mod tray;
+mod tray_i18n;
+mod utils;
+
+pub use cli::CliArgs;
+#[cfg(debug_assertions)]
+use specta_typescript::{BigIntExportBehavior, Typescript};
+use tauri_specta::{collect_commands, collect_events, Builder};
+
+use env_filter::Builder as EnvFilterBuilder;
+use managers::audio::AudioRecordingManager;
+use managers::history::HistoryManager;
+use managers::model::ModelManager;
+use managers::transcription::TranscriptionManager;
+#[cfg(unix)]
+use signal_hook::consts::{SIGUSR1, SIGUSR2};
+#[cfg(unix)]
+use signal_hook::iterator::Signals;
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::Arc;
+use tauri::image::Image;
+pub use transcription_coordinator::TranscriptionCoordinator;
+
+use tauri::tray::TrayIconBuilder;
+use tauri::{AppHandle, Emitter, Listener, Manager};
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_log::{Builder as LogBuilder, RotationStrategy, Target, TargetKind};
+
+use crate::settings::get_settings;
+
+pub static FILE_LOG_LEVEL: AtomicU8 = AtomicU8::new(log::LevelFilter::Debug as u8);
+
+fn level_filter_from_u8(value: u8) -> log::LevelFilter {
+    match value {
+        0 => log::LevelFilter::Off,
+        1 => log::LevelFilter::Error,
+        2 => log::LevelFilter::Warn,
+        3 => log::LevelFilter::Info,
+        4 => log::LevelFilter::Debug,
+        5 => log::LevelFilter::Trace,
+        _ => log::LevelFilter::Trace,
+    }
+}
+
+fn build_console_filter() -> env_filter::Filter {
+    let mut builder = EnvFilterBuilder::new();
+
+    match std::env::var("RUST_LOG") {
+        Ok(spec) if !spec.trim().is_empty() => {
+            if let Err(err) = builder.try_parse(&spec) {
+                log::warn!(
+                    "Ignoring invalid RUST_LOG value '{}': {}. Falling back to info-level console logging",
+                    spec,
+                    err
+                );
+                builder.filter_level(log::LevelFilter::Info);
+            }
+        }
+        _ => {
+            builder.filter_level(log::LevelFilter::Info);
+        }
+    }
+
+    builder.build()
+}
+
+pub(crate) fn show_main_window(app: &AppHandle) {
+    if let Some(main_window) = app.get_webview_window("main") {
+        if let Err(e) = main_window.unminimize() {
+            log::error!("Failed to unminimize webview window: {}", e);
+        }
+        if let Err(e) = main_window.show() {
+            log::error!("Failed to show webview window: {}", e);
+        }
+        if let Err(e) = main_window.set_focus() {
+            log::error!("Failed to focus webview window: {}", e);
+        }
+        #[cfg(target_os = "macos")]
+        {
+            if let Err(e) = app.set_activation_policy(tauri::ActivationPolicy::Regular) {
+                log::error!("Failed to set activation policy to Regular: {}", e);
+            }
+        }
+        return;
+    }
+
+    let webview_labels = app.webview_windows().keys().cloned().collect::<Vec<_>>();
+    log::error!(
+        "Main window not found. Webview labels: {:?}",
+        webview_labels
+    );
+}
+
+#[allow(unused_variables)]
+fn should_force_show_permissions_window(app: &AppHandle) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        let model_manager = app.state::<Arc<ModelManager>>();
+        let has_downloaded_models = model_manager
+            .get_available_models()
+            .iter()
+            .any(|model| model.is_downloaded);
+
+        if !has_downloaded_models {
+            return false;
+        }
+
+        let status = commands::audio::get_windows_microphone_permission_status();
+        if status.supported && status.overall_access == commands::audio::PermissionAccess::Denied {
+            log::info!(
+                "Windows microphone permissions are denied; forcing main window visible for onboarding"
+            );
+            return true;
+        }
+    }
+
+    false
+}
+
+fn allow_portable_recordings(app_handle: &AppHandle) {
+    use tauri_plugin_fs::FsExt;
+
+    let Some(data_dir) = portable::data_dir() else {
+        return;
+    };
+    let recordings = data_dir.join("recordings");
+    if let Err(e) = app_handle
+        .asset_protocol_scope()
+        .allow_directory(&recordings, true)
+    {
+        log::warn!("[portable] recordings are not playable from history (asset scope): {e}");
+    }
+    if let Err(e) = app_handle.fs_scope().allow_directory(&recordings, true) {
+        log::warn!("[portable] recordings are not playable from history (fs scope): {e}");
+    }
+}
+
+fn initialize_core_logic(app_handle: &AppHandle) {
+    allow_portable_recordings(app_handle);
+
+    let recording_manager = Arc::new(
+        AudioRecordingManager::new(app_handle).expect("Failed to initialize recording manager"),
+    );
+    let model_manager =
+        Arc::new(ModelManager::new(app_handle).expect("Failed to initialize model manager"));
+    let transcription_manager = Arc::new(
+        TranscriptionManager::new(app_handle, model_manager.clone())
+            .expect("Failed to initialize transcription manager"),
+    );
+    let history_manager =
+        Arc::new(HistoryManager::new(app_handle).expect("Failed to initialize history manager"));
+
+    managers::transcription::apply_accelerator_settings(app_handle);
+
+    app_handle.manage(recording_manager.clone());
+    app_handle.manage(model_manager.clone());
+    app_handle.manage(transcription_manager.clone());
+    app_handle.manage(history_manager.clone());
+    app_handle.manage(tray::CurrentTrayIconState::new());
+
+    transcription_manager.warm_connection();
+
+    {
+        let rm = recording_manager.clone();
+        std::thread::spawn(move || {
+            if let Err(e) = rm.preload_vad() {
+                log::warn!("VAD pre-load at startup failed: {}", e);
+            }
+        });
+    }
+
+    #[cfg(unix)]
+    let signals = Signals::new(&[SIGUSR1, SIGUSR2]).unwrap();
+
+    #[cfg(unix)]
+    signal_handle::setup_signal_handler(app_handle.clone(), signals);
+
+    #[cfg(target_os = "macos")]
+    {
+        let settings = settings::get_settings(app_handle);
+        if settings.start_hidden && settings.show_tray_icon {
+            let _ = app_handle.set_activation_policy(tauri::ActivationPolicy::Accessory);
+        }
+    }
+
+    let initial_theme = tray::get_current_theme(app_handle);
+
+    let initial_icon_path = tray::get_icon_path(initial_theme, tray::TrayIconState::Idle);
+
+    let tray = TrayIconBuilder::new()
+        .icon(
+            Image::from_path(
+                app_handle
+                    .path()
+                    .resolve(initial_icon_path, tauri::path::BaseDirectory::Resource)
+                    .unwrap(),
+            )
+            .unwrap(),
+        )
+        .tooltip(tray::tray_tooltip())
+        .show_menu_on_left_click(true)
+        .icon_as_template(true)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "settings" => {
+                show_main_window(app);
+            }
+            "check_updates" => {
+                let settings = settings::get_settings(app);
+                if settings.update_checks_enabled {
+                    show_main_window(app);
+                    let _ = app.emit("check-for-updates", ());
+                }
+            }
+            "copy_last_transcript" => {
+                tray::copy_last_transcript(app);
+            }
+            "unload_model" => {
+                let transcription_manager = app.state::<Arc<TranscriptionManager>>();
+
+                if !transcription_manager.is_local_model_loaded() {
+                    log::warn!("No local model is currently loaded.");
+                    return;
+                }
+                match transcription_manager.unload_model() {
+                    Ok(()) => log::info!("Model unloaded via tray."),
+                    Err(e) => log::error!("Failed to unload model via tray: {}", e),
+                }
+            }
+            "cancel" => {
+                use crate::utils::cancel_current_operation;
+
+                cancel_current_operation(app);
+            }
+            "quit" => {
+                app.exit(0);
+            }
+            id if id.starts_with("model_select:") => {
+                let model_id = id.strip_prefix("model_select:").unwrap().to_string();
+                let settings = settings::get_settings(app);
+                if model_id == settings.selected_model {
+                    return;
+                }
+
+                if let Some(mark) = app
+                    .state::<Arc<ModelManager>>()
+                    .cloud_policy_mark(&model_id)
+                {
+                    if model_data_policy::needs_disclosure(
+                        &settings.acknowledged_cloud_policies,
+                        &mark,
+                    ) {
+                        let _ = app.emit("anonen-model-disclosure-required", model_id.clone());
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                        return;
+                    }
+                }
+                let app_clone = app.clone();
+                std::thread::spawn(move || {
+                    match commands::models::switch_active_model(&app_clone, &model_id) {
+                        Ok(()) => {
+                            log::info!("Model switched to {} via tray.", model_id);
+                        }
+                        Err(e) => {
+                            log::error!("Failed to switch model via tray: {}", e);
+                        }
+                    }
+                    tray::update_tray_menu(&app_clone, None);
+                });
+            }
+            _ => {}
+        })
+        .build(app_handle)
+        .unwrap();
+    app_handle.manage(tray);
+
+    utils::update_tray_menu(app_handle, None);
+
+    let settings = settings::get_settings(app_handle);
+    if !settings.show_tray_icon {
+        tray::set_tray_visibility(app_handle, false);
+    }
+
+    let app_handle_for_listener = app_handle.clone();
+    app_handle.listen("model-state-changed", move |_| {
+        tray::update_tray_menu(&app_handle_for_listener, None);
+    });
+
+    let app_handle_for_update = app_handle.clone();
+    app_handle.listen("update-available", move |event| {
+        use tauri_plugin_notification::NotificationExt;
+        let version = serde_json::from_str::<String>(event.payload()).unwrap_or_default();
+        let body = if version.is_empty() {
+            "あのねんを開いて、画面下の「アップデートあり」を押すと更新できます。".to_string()
+        } else {
+            format!(
+                "v{} が出ています。あのねんを開いて、画面下の「アップデートあり」を押すと更新できます。",
+                version
+            )
+        };
+        log::info!("[updater] telling the user about {:?}", version);
+        let _ = app_handle_for_update
+            .notification()
+            .builder()
+            .title("あのねん: アップデートがあります")
+            .body(body)
+            .show();
+    });
+
+    if !cfg!(debug_assertions) {
+        let autostart_manager = app_handle.autolaunch();
+        let settings = settings::get_settings(&app_handle);
+
+        if settings.autostart_enabled {
+            match autostart_manager.enable() {
+                Ok(()) => log::info!(
+                    "[autostart] enabled for {}",
+                    utils::loggable_path_opt(std::env::current_exe().ok().as_deref())
+                ),
+                Err(e) => log::warn!("[autostart] enable failed: {}", e),
+            }
+        } else if let Err(e) = autostart_manager.disable() {
+            log::debug!("[autostart] disable failed: {}", e);
+        }
+    }
+
+    utils::create_recording_overlay(app_handle);
+}
+
+#[tauri::command]
+#[specta::specta]
+fn trigger_update_check(app: AppHandle) -> Result<(), String> {
+    let settings = settings::get_settings(&app);
+    if !settings.update_checks_enabled {
+        return Ok(());
+    }
+    app.emit("check-for-updates", ())
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn show_main_window_command(app: AppHandle) -> Result<(), String> {
+    show_main_window(&app);
+    Ok(())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run(cli_args: CliArgs) {
+    portable::init();
+
+    if managers::reads_dotenv_at_runtime(cfg!(debug_assertions), option_env!("ANONEN_CLOUD_URL")) {
+        let _ = dotenvy::dotenv();
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                let _ = dotenvy::from_path(dir.join(".env"));
+            }
+        }
+    }
+
+    let console_filter = build_console_filter();
+
+    let specta_builder = Builder::<tauri::Wry>::new()
+        .commands(collect_commands![
+            shortcut::change_binding,
+            shortcut::reset_binding,
+            shortcut::change_ptt_setting,
+            shortcut::change_audio_feedback_setting,
+            shortcut::change_audio_feedback_volume_setting,
+            shortcut::change_sound_theme_setting,
+            shortcut::change_start_hidden_setting,
+            shortcut::change_autostart_setting,
+            shortcut::change_translate_to_english_setting,
+            shortcut::change_selected_language_setting,
+            shortcut::change_overlay_position_setting,
+            shortcut::change_debug_mode_setting,
+            shortcut::change_word_correction_threshold_setting,
+            shortcut::change_extra_recording_buffer_setting,
+            shortcut::change_paste_delay_ms_setting,
+            shortcut::change_paste_delay_after_ms_setting,
+            shortcut::change_reliable_paste_setting,
+            shortcut::get_available_typing_tools,
+            shortcut::change_typing_tool_setting,
+            shortcut::change_clipboard_handling_setting,
+            shortcut::change_auto_submit_setting,
+            shortcut::change_auto_submit_key_setting,
+            shortcut::change_post_process_enabled_setting,
+            shortcut::change_experimental_enabled_setting,
+            shortcut::change_post_process_base_url_setting,
+            shortcut::change_post_process_api_key_setting,
+            shortcut::change_post_process_model_setting,
+            shortcut::set_post_process_provider,
+            shortcut::change_remote_asr_opus_compression_setting,
+            shortcut::reset_all_settings,
+            shortcut::fetch_post_process_models,
+            shortcut::add_post_process_prompt,
+            shortcut::update_post_process_prompt,
+            shortcut::delete_post_process_prompt,
+            shortcut::set_post_process_selected_prompt,
+            shortcut::update_custom_words,
+            shortcut::suspend_all_bindings,
+            shortcut::resume_all_bindings,
+            shortcut::change_mute_while_recording_setting,
+            shortcut::change_append_trailing_space_setting,
+            shortcut::change_lazy_stream_close_setting,
+            shortcut::change_filler_word_removal_enabled_setting,
+            shortcut::change_app_language_setting,
+            shortcut::change_update_checks_setting,
+            shortcut::change_keyboard_implementation_setting,
+            shortcut::get_keyboard_implementation,
+            shortcut::acknowledge_model_data_policy,
+            shortcut::change_show_tray_icon_setting,
+            shortcut::change_whisper_accelerator_setting,
+            shortcut::change_ort_accelerator_setting,
+            shortcut::change_whisper_gpu_device,
+            shortcut::change_whisper_flash_attn_setting,
+            shortcut::get_available_accelerators,
+            shortcut::handy_keys::start_handy_keys_recording,
+            shortcut::handy_keys::stop_handy_keys_recording,
+            trigger_update_check,
+            show_main_window_command,
+            commands::cancel_operation,
+            commands::is_portable,
+            commands::get_app_dir_path,
+            commands::get_app_settings,
+            commands::get_default_settings,
+            commands::get_log_dir_path,
+            commands::read_recent_logs,
+            commands::read_native_stderr_log,
+            commands::set_log_level,
+            commands::open_recordings_folder,
+            commands::open_log_dir,
+            commands::open_app_data_dir,
+            commands::initialize_enigo,
+            commands::initialize_shortcuts,
+            commands::models::get_available_models,
+            commands::models::get_model_info,
+            commands::models::download_model,
+            commands::models::cancel_download,
+            commands::models::delete_model,
+            commands::models::set_active_model,
+            commands::models::get_current_model,
+            commands::models::clear_active_model_command,
+            commands::models::get_transcription_model_status,
+            commands::models::is_model_loading,
+            commands::models::has_any_models_available,
+            commands::models::has_any_models_or_downloads,
+            commands::audio::update_microphone_mode,
+            commands::audio::get_microphone_mode,
+            commands::audio::get_windows_microphone_permission_status,
+            commands::audio::open_microphone_privacy_settings,
+            commands::audio::get_available_microphones,
+            commands::audio::set_selected_microphone,
+            commands::audio::get_selected_microphone,
+            commands::audio::get_available_output_devices,
+            commands::audio::set_selected_output_device,
+            commands::audio::get_selected_output_device,
+            commands::audio::play_test_sound,
+            commands::audio::check_custom_sounds,
+            commands::audio::set_clamshell_microphone,
+            commands::audio::get_clamshell_microphone,
+            commands::audio::is_recording,
+            commands::audio::get_last_recording_level,
+            commands::audio::get_last_input_level,
+            commands::audio::get_input_volume,
+            commands::audio::set_input_volume,
+            commands::audio::get_microphone_channels,
+            commands::audio::set_selected_channel,
+            commands::transcription::set_model_unload_timeout,
+            commands::transcription::get_model_load_status,
+            commands::transcription::unload_model_manually,
+            commands::history::get_history_entries,
+            commands::history::toggle_history_entry_saved,
+            commands::history::get_audio_file_path,
+            commands::history::delete_history_entry,
+            commands::history::prefetch_enclave_key,
+            commands::history::retry_history_entry_transcription,
+            commands::history::update_history_retention,
+            commands::history::clear_all_history,
+            commands::history::get_history_audio_usage,
+            commands::anonen_cloud::anonen_cloud_auth_status,
+            commands::anonen_cloud::anonen_cloud_request_otp,
+            commands::anonen_cloud::anonen_cloud_verify_otp,
+            commands::anonen_cloud::anonen_cloud_logout,
+            commands::anonen_cloud::anonen_cloud_current_usage,
+            commands::anonen_cloud::anonen_cloud_cached_subscription_status,
+            commands::anonen_cloud::anonen_cloud_fetch_models,
+            commands::anonen_cloud::anonen_cloud_fetch_usage,
+            helpers::clamshell::is_laptop,
+        ])
+        .events(collect_events![managers::history::HistoryUpdatePayload,]);
+
+    #[cfg(debug_assertions)]
+    specta_builder
+        .export(
+            Typescript::default().bigint(BigIntExportBehavior::Number),
+            "../src/bindings.ts",
+        )
+        .expect("Failed to export typescript bindings");
+
+    let invoke_handler = specta_builder.invoke_handler();
+
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default()
+        .device_event_filter(tauri::DeviceEventFilter::Always)
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            LogBuilder::new()
+                .level(log::LevelFilter::Trace)
+                .max_file_size(500_000)
+                .rotation_strategy(RotationStrategy::KeepOne)
+                .clear_targets()
+                .targets([
+                    Target::new(TargetKind::Stdout).filter({
+                        let console_filter = console_filter.clone();
+                        move |metadata| console_filter.enabled(metadata)
+                    }),
+                    Target::new(if let Some(data_dir) = portable::data_dir() {
+                        TargetKind::Folder {
+                            path: data_dir.join("logs"),
+                            file_name: Some("anonen".into()),
+                        }
+                    } else {
+                        TargetKind::LogDir {
+                            file_name: Some("anonen".into()),
+                        }
+                    })
+                    .filter(|metadata| {
+                        let file_level = FILE_LOG_LEVEL.load(Ordering::Relaxed);
+                        metadata.level() <= level_filter_from_u8(file_level)
+                    }),
+                ])
+                .build(),
+        );
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(tauri_nspanel::init());
+    }
+
+    builder
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if args.iter().any(|a| a == "--toggle-transcription") {
+                signal_handle::send_transcription_input(app, "transcribe", "CLI");
+            } else if args.iter().any(|a| a == "--toggle-post-process") {
+                signal_handle::send_transcription_input(app, "transcribe_with_post_process", "CLI");
+            } else if args.iter().any(|a| a == "--cancel") {
+                crate::utils::cancel_current_operation(app);
+            } else {
+                show_main_window(app);
+            }
+        }))
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_macos_permissions::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec!["--start-hidden".into()]),
+        ))
+        .manage(cli_args.clone())
+        .setup(move |app| {
+            specta_builder.mount_events(app);
+
+            match portable::app_log_dir(&app.handle()) {
+                Ok(log_dir) => {
+                    match native_log::capture_process_stderr(&log_dir) {
+                        Some(path) => log::info!(
+                            "Native stderr is being captured to {}",
+                            utils::loggable_path(&path)
+                        ),
+
+                        None => log::debug!("Native stderr was not redirected"),
+                    }
+
+                    if gpu_guard::take_previous_crash_marker(&log_dir) {
+                        log::warn!(
+                            "The previous run vanished during GPU inference; \
+                             using CPU for this run"
+                        );
+                        gpu_guard::disable_gpu_for_this_run();
+                    }
+                }
+                Err(e) => log::warn!("Could not resolve the log directory: {}", e),
+            }
+
+            #[cfg(windows)]
+            whisper_rs::install_logging_hooks();
+
+            shortcut::normalize_implementation_for_platform(app.handle());
+
+            let mut win_builder =
+                tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("/".into()))
+                    .title("あのねん")
+                    .inner_size(680.0, 570.0)
+                    .min_inner_size(680.0, 570.0)
+                    .resizable(true)
+                    .maximizable(false)
+                    .visible(false);
+
+            if let Some(data_dir) = portable::data_dir() {
+                win_builder = win_builder.data_directory(data_dir.join("webview"));
+            }
+
+            win_builder.build()?;
+
+            let mut settings = get_settings(&app.handle());
+
+            if cli_args.debug {
+                settings.debug_mode = true;
+                settings.log_level = settings::LogLevel::Trace;
+            }
+
+            let tauri_log_level: tauri_plugin_log::LogLevel = settings.log_level.into();
+            let file_log_level: log::Level = tauri_log_level.into();
+
+            FILE_LOG_LEVEL.store(file_log_level.to_level_filter() as u8, Ordering::Relaxed);
+            let app_handle = app.handle().clone();
+            app.manage(TranscriptionCoordinator::new(app_handle.clone()));
+            app.manage(actions::PipelineGeneration(
+                std::sync::atomic::AtomicU64::new(0),
+            ));
+            app.manage(managers::anonen_cloud_auth::AnonenCloudAuthManager::new());
+            app.manage(managers::usage::UsageManager::new());
+
+            initialize_core_logic(&app_handle);
+
+            overlay::update_overlay_enabled_cache(
+                settings.overlay_position != settings::OverlayPosition::None,
+            );
+
+            std::thread::spawn(|| {
+                let _ = crate::managers::transcription::get_available_accelerators();
+            });
+
+            if cli_args.no_tray {
+                tray::set_tray_visibility(&app_handle, false);
+            }
+
+            let should_hide = cli_args.start_hidden && settings.start_hidden;
+            let should_force_show = should_force_show_permissions_window(&app_handle);
+
+            let tray_available = settings.show_tray_icon && !cli_args.no_tray;
+            if should_force_show || !should_hide || !tray_available {
+                show_main_window(&app_handle);
+            }
+
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                let _res = window.hide();
+
+                #[cfg(target_os = "macos")]
+                {
+                    let settings = get_settings(&window.app_handle());
+                    let tray_visible =
+                        settings.show_tray_icon && !window.app_handle().state::<CliArgs>().no_tray;
+                    if tray_visible {
+                        let res = window
+                            .app_handle()
+                            .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                        if let Err(e) = res {
+                            log::error!("Failed to set activation policy: {}", e);
+                        }
+                    }
+                }
+            }
+            tauri::WindowEvent::ThemeChanged(theme) => {
+                log::info!("Theme changed to: {:?}", theme);
+
+                utils::refresh_tray_icon(&window.app_handle());
+            }
+            _ => {}
+        })
+        .invoke_handler(invoke_handler)
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = &event {
+                show_main_window(app);
+            }
+            let _ = (app, event);
+        });
+}

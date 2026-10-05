@@ -1,0 +1,7 @@
+{
+  "identifier": "desktop-capability",
+  "description": "Desktop-only additions. Autostart and global shortcuts used to be listed here, but both are registered from Rust and never invoked from the webview.",
+  "platforms": ["macOS", "windows", "linux"],
+  "windows": ["main"],
+  "permissions": ["updater:default"]
+}

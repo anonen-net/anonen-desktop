@@ -1,0 +1,969 @@
+{
+  "app": {
+    "name": "あのねん"
+  },
+  "tray": {
+    "settings": "Settings...",
+    "checkUpdates": "Check for Updates...",
+    "copyLastTranscript": "Copy Last Transcript",
+    "unloadModel": "Unload Model",
+    "model": "Model",
+    "quit": "Quit",
+    "cancel": "Cancel"
+  },
+  "sidebar": {
+    "general": "Settings",
+    "models": "Models",
+    "advanced": "Advanced",
+    "postProcessing": "Post Process",
+    "history": "History",
+    "howto": "How to use",
+    "debug": "Debug",
+    "about": "About",
+    "logs": "Logs"
+  },
+  "howtoSteps": {
+    "press": "Press <key></key>",
+    "pressHold": "Hold <key></key>",
+    "pressCaption": "Recording starts",
+    "speak": "Speak",
+    "speakSample": "Try saying this:",
+    "speakQuote": "“{{text}}”",
+    "stop": "Press <key></key> again",
+    "stopHold": "Release <key></key>",
+    "stopCaption": "It stops and becomes text",
+    "cancel": "To cancel, press"
+  },
+  "onboarding": {
+    "downloadConfirm": {
+      "title": "Download this model?",
+      "body": "{{name}} is about {{size}}. Depending on your connection, this can take several minutes.",
+      "ok": "Download",
+      "cancel": "Cancel"
+    },
+    "subtitle": "To get started, choose a transcription model",
+    "chooseLater": "Choose later",
+    "recommended": "Recommended",
+    "download": "Download",
+    "downloading": "Downloading...",
+    "customModelDescription": "Not officially supported",
+    "downloadFailed": "Download failed. Please try again.",
+    "modelCard": {
+      "accuracy": "accuracy",
+      "speed": "speed",
+      "pricePerHour": "${{price}}/hr",
+      "measured": "measured {{seconds}}s ({{count}} runs)",
+      "speedFromMeasured": "Relative to what this machine actually measured"
+    },
+    "models": {
+      "small": {
+        "name": "Whisper Small",
+        "description": "Fast and fairly accurate."
+      },
+      "medium": {
+        "name": "Whisper Medium",
+        "description": "Good accuracy, medium speed"
+      },
+      "turbo": {
+        "name": "Whisper Turbo",
+        "description": "Balanced accuracy and speed."
+      },
+      "large": {
+        "name": "Whisper Large",
+        "description": "Runs entirely on your PC. Speed depends on your machine."
+      },
+      "parakeet-tdt-0.6b-v2": {
+        "name": "Parakeet V2",
+        "description": "English only. The best model for English speakers."
+      },
+      "parakeet-tdt-0.6b-v3": {
+        "name": "Parakeet V3",
+        "description": "Fast and accurate"
+      },
+      "moonshine-base": {
+        "name": "Moonshine Base",
+        "description": "Very fast, English only. Handles accents well."
+      },
+      "moonshine-tiny-streaming-en": {
+        "name": "Moonshine V2 Tiny",
+        "description": "Ultra-fast, English only"
+      },
+      "moonshine-small-streaming-en": {
+        "name": "Moonshine V2 Small",
+        "description": "Fast, English only. Good balance of speed and accuracy."
+      },
+      "moonshine-medium-streaming-en": {
+        "name": "Moonshine V2 Medium",
+        "description": "English only. High quality."
+      },
+      "breeze-asr": {
+        "name": "Breeze ASR",
+        "description": "Optimized for Taiwanese Mandarin. Code-switching support."
+      },
+      "sense-voice-int8": {
+        "name": "SenseVoice",
+        "description": "Very fast. Chinese, English, Japanese, Korean, Cantonese."
+      },
+      "gigaam-v3-e2e-ctc": {
+        "name": "GigaAM v3",
+        "description": "Russian speech recognition. Fast and accurate."
+      },
+      "canary-180m-flash": {
+        "name": "Canary 180M Flash",
+        "description": "Very fast. English, German, Spanish, French. Supports translation."
+      },
+      "canary-1b-v2": {
+        "name": "Canary 1B v2",
+        "description": "Accurate multilingual. 25 European languages. Supports translation."
+      },
+      "cohere-int8": {
+        "name": "Cohere",
+        "description": "A large, slower, but very accurate multilingual model."
+      }
+    },
+    "errors": {
+      "loadModels": "Failed to load available models",
+      "downloadModel": "Failed to download model: {{error}}",
+      "selectModel": "Could not switch to the model. Please try again."
+    },
+    "permissions": {
+      "title": "Permissions Required",
+      "description": "Anonen needs a couple of permissions to work properly.",
+      "microphone": {
+        "title": "Microphone Access",
+        "description": "Required to hear your voice for transcription."
+      },
+      "accessibility": {
+        "title": "Accessibility Access",
+        "description": "Required to type transcribed text into your applications."
+      },
+      "grant": "Grant Permission",
+      "granted": "Granted",
+      "waiting": "Waiting...",
+      "allGranted": "All set!",
+      "errors": {
+        "checkFailed": "Failed to check permissions. Please try again.",
+        "requestFailed": "Failed to request permission. Please try again."
+      }
+    },
+    "shortcut": {
+      "title": "Choose how to start recording",
+      "description": "This key starts and stops recording. You will try it on the next screen.",
+      "inputTitle": "Key to start recording",
+      "inputDescription": "Click the box, then press the key you want.",
+      "changeLater": "If it clashes with another app, pick a different key. You can change it later in Settings.",
+      "next": "Next"
+    },
+    "firstRun": {
+      "title": "Try it once",
+      "description": "Try it in this order: 1 → 2 → 3.",
+      "sampleText": "It's a nice day today.",
+      "recording": "Recording",
+      "working": "Transcribing…",
+      "success": "It worked",
+      "whereItGoes": "Normally the text goes into whatever app you are using. On this screen we show it here instead.",
+      "finish": "Get started",
+      "skip": "Try later"
+    }
+  },
+  "modelSelector": {
+    "custom": "Custom",
+    "localModel": "Local",
+    "active": "Active",
+    "switching": "Switching...",
+    "noModelsAvailable": "No models available",
+    "verifying": "Verifying {{modelName}}...",
+    "verifyingGeneric": "Verifying...",
+    "extracting": "Extracting {{modelName}}...",
+    "extractingMultiple": "Extracting {{count}} models...",
+    "extractingGeneric": "Extracting...",
+    "downloading": "Downloading {{percentage}}%",
+    "downloadingMultiple": "Downloading {{count}} models...",
+    "modelReady": "Model Ready",
+    "loading": "Loading {{modelName}}...",
+    "loadingGeneric": "Loading...",
+    "modelError": "Model Error",
+    "modelStatusCheckFailed": "Could not check model status",
+    "modelSwitchFailed": "Failed to switch model",
+    "modelUnloaded": "Model Unloaded",
+    "noModelDownloadRequired": "No Model - Download Required",
+    "deleteModel": "Delete {{modelName}}",
+    "downloadSpeed": "{{speed}} MB/s",
+    "cancel": "Cancel",
+    "cancelDownload": "Cancel download",
+    "capabilities": {
+      "languageSelection": "Supports multiple input languages",
+      "singleLanguage": "Supports this language only",
+      "multiLanguage": "Multi-language",
+      "languageOnly": "{{language}} Only",
+      "translation": "Can translate to English",
+      "translate": "Translate to English",
+      "usageDiscount": "Uses {{percent}}% less of your quota than other models.",
+      "usageSurcharge": "Uses {{percent}}% more of your quota than other models."
+    },
+    "usageDiscountShort": "Uses {{percent}}% less",
+    "usageSurchargeShort": "Uses {{percent}}% more",
+    "details": "Details",
+    "languageSelectable": "Language can be set",
+    "languageAutoOnly": "Auto-detect only",
+    "translationSupported": "Can translate to English",
+    "translationUnsupported": "No English translation"
+  },
+  "settings": {
+    "modelSettings": {
+      "title": "Transcription"
+    },
+    "general": {
+      "version": "Anonen v{{version}}",
+      "title": "General",
+      "shortcut": {
+        "title": "Anonen Shortcuts",
+        "description": "Configure keyboard shortcuts to trigger speech-to-text recording",
+        "loading": "Loading shortcuts...",
+        "none": "No shortcuts configured",
+        "notFound": "Shortcut not found",
+        "pressKeys": "Press keys...",
+        "bindings": {
+          "transcribe": {
+            "name": "Transcribe Shortcut",
+            "description": "The keyboard shortcut to record and transcribe your voice."
+          },
+          "cancel": {
+            "name": "Cancel Shortcut",
+            "description": "The keyboard shortcut to cancel the current recording."
+          },
+          "transcribe_with_post_process": {
+            "name": "Post-Processing Hotkey",
+            "description": "Optional: A dedicated hotkey that always applies AI post-processing to your transcription."
+          }
+        },
+        "errors": {
+          "restore": "Failed to restore original shortcut",
+          "set": "Failed to set shortcut: {{error}}",
+          "reset": "Failed to reset shortcut to original value"
+        },
+        "warnings": {
+          "noModifier": "Without Ctrl or Shift, recording starts every time you press this key.",
+          "duplicate": "Same as “{{other}}”. Only one of them will work.",
+          "wellKnown": "This key is widely used by other apps. If it clashes, recording will not start."
+        }
+      },
+      "language": {
+        "title": "Language",
+        "description": "Select the language for speech recognition. Auto will automatically determine the language, while selecting a specific language can improve accuracy for that language.",
+        "descriptionUnsupported": "Parakeet model automatically detects the language. No manual selection is needed.",
+        "searchPlaceholder": "Search languages...",
+        "noResults": "No languages found",
+        "auto": "Auto"
+      },
+      "pushToTalk": {
+        "label": "Push To Talk",
+        "description": "Hold to record, release to stop"
+      }
+    },
+    "models": {
+      "title": "Models",
+      "description": "Select a transcription model or download additional models. Different models offer varying levels of accuracy and speed.",
+      "yourModels": "Downloaded Models",
+      "availableModels": "Available to Download",
+      "downloaded": "Downloaded",
+      "available": "Available to Download",
+      "deleteConfirm": "Are you sure you want to delete {{modelName}}? You will need to download it again to use it.",
+      "deleteActiveConfirm": "{{modelName}} is your active model. Deleting it will stop transcriptions until you select a new model. Are you sure?",
+      "deleteTitle": "Delete Model",
+      "filters": {
+        "all": "All",
+        "multiLanguage": "Multi-language",
+        "translation": "Translation",
+        "allLanguages": "All Languages"
+      },
+      "noModelsMatch": "No models match this filter.",
+      "apiKey": {
+        "title": "API Key",
+        "placeholder": "Enter your API key"
+      },
+      "refresh": "Refresh",
+      "resetStats": "Reset timings",
+      "statsReset": "Response-time measurements cleared"
+    },
+    "recording": {
+      "title": "Recording",
+      "inputVolume": {
+        "title": "Microphone input volume",
+        "description": "The same value as your system sound settings (other apps are affected too). Too high distorts the audio; too low hurts recognition accuracy."
+      }
+    },
+    "recordingSound": {
+      "title": "Recording Sound"
+    },
+    "sound": {
+      "title": "Sound",
+      "microphone": {
+        "title": "Microphone",
+        "description": "Select your preferred microphone device",
+        "placeholder": "Select microphone...",
+        "loading": "Loading...",
+        "lowVolumeTitle": "Low Input Volume Detected",
+        "lowVolumeWarning": "Input volume is very low ({{db}} dB). This may reduce transcription accuracy. Check your microphone gain, distance, and audio enhancement settings."
+      },
+      "channel": {
+        "title": "Input Channel",
+        "description": "Select which input channel to record from. Use this if your audio interface has multiple inputs.",
+        "average": "Average all channels",
+        "channel": "Channel {{n}}"
+      },
+      "audioFeedback": {
+        "label": "Audio Feedback",
+        "description": "Play sound when recording starts and stops"
+      },
+      "outputDevice": {
+        "title": "Output Device",
+        "description": "Select your preferred audio output device for feedback sounds",
+        "placeholder": "Select output device...",
+        "loading": "Loading..."
+      },
+      "volume": {
+        "title": "Volume",
+        "description": "Adjust the volume of audio feedback sounds"
+      }
+    },
+    "advanced": {
+      "title": "Advanced",
+      "groups": {
+        "app": "App",
+        "output": "Output",
+        "transcription": "Transcription",
+        "history": "History",
+        "experimental": "Experimental"
+      },
+      "experimentalToggle": {
+        "label": "Experimental Features",
+        "description": "Enable experimental features that are still in development."
+      },
+      "lazyStreamClose": {
+        "label": "Keep Mic Open Between Transcriptions",
+        "description": "Keeps the microphone stream open for 30 seconds after recording stops, reducing latency for back-to-back transcriptions. May degrade Bluetooth audio quality while active."
+      },
+      "acceleration": {
+        "whisper": {
+          "title": "Whisper Acceleration",
+          "description": "Hardware acceleration for Whisper models. Auto uses GPU if available (Metal on macOS, Vulkan on Windows/Linux)."
+        },
+        "ort": {
+          "title": "ONNX Acceleration",
+          "description": "Hardware acceleration for ONNX models (Parakeet, Canary, Moonshine, etc.). DirectML on Windows is experimental. Models may fail to transcribe."
+        },
+        "gpuDevice": {
+          "title": "GPU Device",
+          "description": "Select which GPU to use for Whisper inference. Auto picks the dedicated GPU.",
+          "auto": "Auto"
+        },
+        "flashAttention": {
+          "label": "Flash attention (Whisper)",
+          "description": "Diagnostics only. Turning this off makes local Whisper models slower but changes how the graphics card is used — try it if the app closes unexpectedly while transcribing."
+        }
+      },
+      "startHidden": {
+        "label": "Start Hidden",
+        "description": "Launch to system tray without opening the window."
+      },
+      "autostart": {
+        "label": "Launch on Startup",
+        "description": "Automatically start Anonen when you log in to your computer."
+      },
+      "showTrayIcon": {
+        "label": "Show Tray Icon",
+        "description": "Display the Anonen icon in the system tray."
+      },
+      "overlay": {
+        "title": "Overlay Position",
+        "description": "Display visual feedback overlay during recording and transcription. On Linux 'None' is recommended.",
+        "options": {
+          "none": "None",
+          "bottom": "Bottom",
+          "top": "Top"
+        }
+      },
+      "pasteMethod": {
+        "title": "Paste Method",
+        "description": "Choose how text is inserted. Direct: simulates typing via system input. None: skips paste, only updates history/clipboard.",
+        "options": {
+          "clipboard": "Clipboard ({{modifier}}+V)",
+          "clipboardCtrlShiftV": "Clipboard (Ctrl+Shift+V)",
+          "clipboardShiftInsert": "Clipboard (Shift+Insert)",
+          "direct": "Direct",
+          "none": "None",
+          "externalScript": "External Script"
+        },
+        "externalScriptPlaceholder": "/path/to/your/script.sh"
+      },
+      "typingTool": {
+        "title": "Typing Tool",
+        "description": "Choose which Linux typing tool to use for Direct paste method. Auto will automatically detect and use the best available tool for your system.",
+        "options": {
+          "auto": "Auto (Recommended)"
+        }
+      },
+      "clipboardHandling": {
+        "title": "Clipboard Handling",
+        "description": "Don't Modify Clipboard preserves your current clipboard contents after transcription. Copy to Clipboard leaves the transcription result in your clipboard after pasting.",
+        "options": {
+          "dontModify": "Don't Modify Clipboard",
+          "copyToClipboard": "Copy to Clipboard"
+        }
+      },
+      "autoSubmit": {
+        "title": "Auto Submit",
+        "description": "Automatically send the selected key combination after text insertion. Cmd+Enter applies on macOS, while Windows/Linux use Super+Enter.",
+        "options": {
+          "off": "Off",
+          "enter": "Enter",
+          "cmdEnter": "Cmd+Enter",
+          "superEnter": "Super+Enter",
+          "ctrlEnter": "Ctrl+Enter"
+        }
+      },
+      "translateToEnglish": {
+        "label": "Translate to English",
+        "description": "Automatically translate speech from other languages to English during transcription.",
+        "descriptionUnsupported": "Translation is not supported by the {{model}} model."
+      },
+      "modelUnload": {
+        "title": "Unload Model",
+        "description": "Automatically free GPU/CPU memory when the model hasn't been used for the specified time",
+        "options": {
+          "never": "Never",
+          "immediately": "Immediately",
+          "min2": "After 2 minutes",
+          "min5": "After 5 minutes",
+          "min10": "After 10 minutes",
+          "min15": "After 15 minutes",
+          "hour1": "After 1 hour",
+          "sec15": "After 15 seconds (Debug)"
+        }
+      },
+      "customWords": {
+        "title": "Custom Words",
+        "description": "Help supported models recognize names and specialized terms. Fuzzy correction is currently limited to words using A–Z and numbers.",
+        "placeholder": "Add a word",
+        "add": "Add",
+        "remove": "Remove {{word}}",
+        "duplicate": "\"{{word}}\" already exists"
+      },
+      "fillerWordRemoval": {
+        "title": "Remove Filler Words",
+        "description": "Removes common hesitation words from transcriptions. Turn off to keep them."
+      },
+      "remoteAsr": {
+        "opusCompression": {
+          "label": "Opus Audio Compression",
+          "description": "Compress audio with Opus codec before sending (~10x smaller). Disable if the server doesn't support Opus/OGG."
+        }
+      }
+    },
+    "postProcessing": {
+      "title": "Post Process",
+      "hotkey": {
+        "title": "Hotkey"
+      },
+      "api": {
+        "title": "API (OpenAI Compatible)",
+        "provider": {
+          "title": "Provider",
+          "description": "Select an OpenAI-compatible provider."
+        },
+        "baseUrl": {
+          "title": "Base URL",
+          "description": "API base URL for the selected provider. Only the custom provider can be edited.",
+          "placeholder": "https://api.openai.com/v1"
+        },
+        "apiKey": {
+          "title": "API Key",
+          "description": "API key for the selected provider.",
+          "placeholder": "sk-..."
+        },
+        "model": {
+          "title": "Model",
+          "descriptionCustom": "Provide the model identifier expected by your custom endpoint.",
+          "descriptionDefault": "Choose a model exposed by the selected provider.",
+          "placeholderWithOptions": "Search or select a model",
+          "placeholderNoOptions": "Type a model name",
+          "refreshModels": "Refresh models"
+        }
+      },
+      "prompts": {
+        "title": "Prompt",
+        "selectedPrompt": {
+          "title": "Selected Prompt",
+          "description": "Select a template for refining transcriptions or create a new one. Use ${output} inside the prompt text to reference the captured transcript."
+        },
+        "noPrompts": "No prompts available",
+        "selectPrompt": "Select a prompt",
+        "createNew": "Create New Prompt",
+        "promptLabel": "Prompt Label",
+        "promptLabelPlaceholder": "Enter prompt name",
+        "promptInstructions": "Prompt Instructions",
+        "promptInstructionsPlaceholder": "Write the instructions to run after transcription. Example: Improve grammar and clarity for the following text: ${output}",
+        "promptTip": "Tip: Use <code>${output}</code> to insert the transcribed text in your prompt.",
+        "updatePrompt": "Update Prompt",
+        "deletePrompt": "Delete Prompt",
+        "createPrompt": "Create Prompt",
+        "cancel": "Cancel",
+        "selectToEdit": "Select a prompt above to view and edit its details.",
+        "createFirst": "Click 'Create New Prompt' above to create your first post-processing prompt."
+      }
+    },
+    "history": {
+      "title": "History",
+      "clearAll": "Delete all",
+      "clearAllTitle": "Delete all history",
+      "clearAllConfirm": "Delete all transcription history and recordings? This cannot be undone.",
+      "clearAllError": "Failed to delete history",
+      "openFolder": "Open Recordings Folder",
+      "loading": "Loading history...",
+      "empty": "No transcriptions yet. Start recording to build your history!",
+      "copyToClipboard": "Copy transcription to clipboard",
+      "save": "Add to favorites",
+      "unsave": "Remove from favorites",
+      "favoritesOnly": "Favorites only",
+      "favoritesEmpty": "No favorites yet",
+      "delete": "Delete entry",
+      "deleteError": "Failed to delete entry. Please try again.",
+      "retranscribe": "Re-transcribe",
+      "retranscribeError": "Failed to re-transcribe. Please try again.",
+      "retranscribeWithPostProcess": "Re-transcribe with post-processing",
+      "retranscribeWithPostProcessError": "Failed to re-transcribe with post-processing. Please try again.",
+      "retranscribeOpus": "Re-transcribe with Opus",
+      "retranscribeWav": "Re-transcribe with WAV",
+      "retranscribedOpus": "Re-transcribed with Opus compression",
+      "retranscribedWav": "Re-transcribed with raw WAV",
+      "postProcessed": "Post-processed",
+      "transcribing": "Transcribing...",
+      "transcriptionFailed": "Transcription failed. You can re-transcribe using the retry icon.",
+      "noAudio": "The recording is no longer kept. Only the text remains.",
+      "revisionPosition": "{{index}} / {{total}}",
+      "revisionOlder": "Older",
+      "revisionNewer": "Newer"
+    },
+    "historyRetention": {
+      "title": "History retention",
+      "description": "How much of your transcripts and recordings stays on this machine. Starred entries are never removed by “Latest 20”. Switching to “Latest 20” removes older unstarred entries right away. “Keep forever” keeps transcripts forever but only the latest 100 recordings (recordings on starred entries and failed transcriptions are kept). “Stop keeping from now on” means new transcripts and recordings are not kept. Entries already saved stay where they are — use “Delete all” in History to remove them. Failed recordings are not kept either, so there is no way to re-transcribe and recover them later.",
+      "options": {
+        "none": "Stop keeping from now on",
+        "recent": "Latest {{count}}",
+        "unlimited": "Keep forever (recordings: latest 100)"
+      },
+      "usage": {
+        "none": "No recordings are stored on this computer",
+        "underOneMb": "Recordings on this computer: {{count}} (under 1 MB)",
+        "megabytes": "Recordings on this computer: {{count}} (about {{mb}} MB)"
+      }
+    },
+    "debug": {
+      "title": "Debug",
+      "logDirectory": {
+        "title": "Log Directory",
+        "description": "Location where log files are stored"
+      },
+      "logLevel": {
+        "title": "Log Level",
+        "description": "Set the verbosity of logging"
+      },
+      "updateChecks": {
+        "label": "Check for Updates",
+        "description": "Automatically check for new versions of Anonen"
+      },
+      "soundTheme": {
+        "label": "Sound Theme",
+        "description": "Choose a sound theme for recording start and stop feedback"
+      },
+      "wordCorrectionThreshold": {
+        "title": "Word Correction Threshold",
+        "description": "Sensitivity for custom word corrections"
+      },
+      "historyLimit": {
+        "title": "History Limit",
+        "description": "Maximum number of history entries to keep",
+        "entries": "entries"
+      },
+      "recordingRetention": {
+        "title": "Auto-Delete Recordings",
+        "description": "Automatically delete old recordings to save space",
+        "never": "Never",
+        "preserveLimit": "Keep latest {{count}}",
+        "days3": "After 3 days",
+        "weeks2": "After 2 weeks",
+        "months3": "After 3 months",
+        "placeholder": "Select retention period..."
+      },
+      "alwaysOnMicrophone": {
+        "label": "Always-On Microphone",
+        "description": "Keep microphone active for faster response"
+      },
+      "clamshellMicrophone": {
+        "title": "Clamshell Microphone",
+        "description": "Microphone to use when laptop lid is closed"
+      },
+      "postProcessingToggle": {
+        "label": "Post Processing",
+        "description": "Enable AI-powered text refinement after transcription"
+      },
+      "muteWhileRecording": {
+        "label": "Mute While Recording",
+        "description": "Mute system audio during recording"
+      },
+      "appendTrailingSpace": {
+        "label": "Append Trailing Space",
+        "description": "Add a space after pasted transcription"
+      },
+      "keyboardImplementation": {
+        "title": "Keyboard Implementation",
+        "description": "Choose the keyboard shortcut backend.",
+        "bindingsReset": "Keyboard shortcuts were incompatible and reset to defaults"
+      },
+      "pasteDelay": {
+        "title": "Paste Delay (Before)",
+        "description": "Delay (in milliseconds) after copying text, before sending the paste keystroke. Increase if nothing gets pasted."
+      },
+      "pasteDelayAfter": {
+        "title": "Paste Delay (After)",
+        "description": "Delay (in milliseconds) after the paste keystroke, before restoring your previous clipboard. Increase if your old clipboard content is being pasted instead of the transcription."
+      },
+      "reliablePaste": {
+        "title": "Reliable Paste (Beta)",
+        "description": "Restore the clipboard only after the target app actually reads the transcription, instead of after a fixed delay. Intended to fix old clipboard content being pasted under system load. Requires a clipboard paste method; macOS and Windows only."
+      },
+      "recordingBuffer": {
+        "title": "Extra Recording Buffer",
+        "description": "Extra time (in milliseconds) to keep recording after you release the key, to capture trailing audio. 0 = no extra buffer."
+      }
+    },
+    "revealHidden": {
+      "label": "Show hidden settings",
+      "description": "Reveal options this build hides by default. Turn this on to bring every hidden setting back at once."
+    },
+    "theme": {
+      "accentColor": "Accent Color",
+      "dark": "Dark",
+      "light": "Light",
+      "mode": {
+        "label": "Theme",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
+    "fontScale": {
+      "label": "Text size",
+      "description": "Scales the text and spacing of the whole app. Windows' text-size accessibility setting does not reach the app, so set it here."
+    },
+    "about": {
+      "title": "About",
+      "version": {
+        "title": "Version",
+        "description": "Current version of Anonen"
+      },
+      "appDataDirectory": {
+        "title": "App Data Directory",
+        "description": "Location where Anonen stores its data"
+      },
+      "sourceCode": {
+        "title": "Source Code",
+        "description": "View source code and contribute",
+        "button": "View on GitHub"
+      },
+      "acknowledgments": {
+        "title": "Acknowledgments",
+        "whisper": {
+          "title": "Whisper.cpp",
+          "description": "High-performance inference of OpenAI's Whisper automatic speech recognition model",
+          "details": "Anonen uses Whisper.cpp for fast, local speech-to-text processing. Thanks to the amazing work by Georgi Gerganov and contributors."
+        },
+        "handy": {
+          "title": "Handy",
+          "description": "Open-source speech-to-text desktop application",
+          "details": "This application is built upon Handy, an open-source project by CJ Pais. Handy is licensed under the MIT License."
+        }
+      },
+      "legal": {
+        "title": "Legal",
+        "description": "Privacy policy and the statutory commerce disclosure.",
+        "privacy": "Privacy policy",
+        "tokushoho": "Commerce disclosure",
+        "openFailed": "Could not open the page"
+      }
+    },
+    "licenses": {
+      "title": "Licenses and attribution",
+      "description": "Copyright notices and license texts for third-party software included in this app",
+      "show": "Show full text",
+      "hide": "Hide"
+    },
+    "support": {
+      "title": "Feedback and support",
+      "intro": "Report a bug or ask a question through the form. You can also copy diagnostics and paste them in.",
+      "description": "Diagnostics contain the time and time zone, the app and OS version, the UI language, the model and microphone name, the first 8 characters of your account ID, your plan and usage, and recent logs. Audio and transcripts are not included. You can check them before sending.",
+      "openContact": "Open form",
+      "copyDiagnostics": "Copy diagnostics",
+      "diagnosticsInfo": "What the diagnostics include",
+      "diagnosticsCopied": "Diagnostics copied to the clipboard (time and time zone, version, OS, UI language, model and microphone name, first 8 characters of the account ID, plan and usage, recent logs)",
+      "openFailed": "Could not open the contact form",
+      "copyFailed": "Could not copy diagnostics"
+    },
+    "howto": {
+      "title": "How to use",
+      "whereItGoes": {
+        "label": "Where the text goes",
+        "body": "Into the text field of the app you are using at that moment"
+      }
+    },
+    "resetAll": {
+      "button": "Reset All Settings",
+      "title": "Reset Settings",
+      "confirm": "All settings will be restored to their defaults. Are you sure?"
+    },
+    "logs": {
+      "settingsTitle": "Log settings",
+      "filter": {
+        "all": "All",
+        "timing": "Timing",
+        "problems": "Warnings & errors"
+      },
+      "autoRefresh": "Auto-refresh",
+      "refresh": "Refresh",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Failed to copy",
+      "empty": "No log entries yet. Run a transcription and refresh.",
+      "showing": "Showing {{shown}} of the last {{total}} lines"
+    }
+  },
+  "footer": {
+    "downloadingModel": "Downloading {{model}}...",
+    "checkingUpdates": "Checking for updates...",
+    "updateAvailable": "Update available: {{version}}",
+    "updateAvailableShort": "Update available",
+    "upToDate": "Up to date",
+    "downloadUpdate": "Download Update",
+    "restart": "Restart",
+    "updateCheckingDisabled": "Update Checking Disabled",
+    "downloading": "Downloading... {{progress}}%",
+    "installing": "Installing...",
+    "preparing": "Preparing...",
+    "checkForUpdates": "Check for updates",
+    "portableUpdateTitle": "Manual update required",
+    "portableUpdateMessage": "Portable installs cannot be updated automatically. Download the installer for your system below, run it, and install to the same folder — your Data/ folder (settings, models, recordings) is kept in place.",
+    "portableUpdateButton": "Download installer",
+    "portableUpdateBrowseMessage": "Portable installs cannot be updated automatically. Download the latest version for your system from GitHub Releases and install it to the same folder — your Data/ folder (settings, models, recordings) is kept in place.",
+    "portableUpdateBrowseButton": "Open GitHub Releases"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Reset",
+    "add": "Add",
+    "remove": "Remove",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "close": "Close",
+    "open": "Open",
+    "default": "Default",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "on": "On",
+    "off": "Off",
+    "yes": "Yes",
+    "no": "No",
+    "noOptionsFound": "No options found",
+    "downloading": "Downloading...",
+    "downloadingCount": "{{count}} downloading..."
+  },
+  "accessibility": {
+    "permissionsRequired": "Accessibility Permissions Required",
+    "permissionsDescription": "Anonen needs accessibility permissions to type transcribed text.",
+    "openSettings": "Open System Settings",
+    "dismiss": "Dismiss"
+  },
+  "errors": {
+    "notice": {
+      "seal_unavailable": "Could not confirm a safe way to send (your audio was not sent)",
+      "seal_outdated": "This app cannot verify the current server. Please update the app to the latest version (your audio was not sent)",
+      "seal_failed": "The audio could not be protected, so sending was stopped",
+      "seal_key_lost": "Could not resend to the server. Please try again (your audio was sent protected)",
+      "seal_outdated_after_send": "This app cannot verify the current server. Please update the app to the latest version (your audio was sent protected)",
+      "seal_response_broken": "No protected response was received. Please try again later (your audio was sent protected)",
+      "seal_refused": "The server did not accept the request as a protected one. Please try again later (your audio was sent protected)",
+      "plaintext_refused": "The server did not accept an unprotected request",
+      "auth_failed": "Authentication failed. Please sign in again"
+    },
+    "loadDirectory": "Error loading directory: {{error}}",
+    "micPermissionDeniedTitle": "Microphone Access Denied",
+    "micPermissionDenied": {
+      "generic": "Microphone access was denied by the operating system. Please grant microphone permission in your system settings.",
+      "windows": "Enable microphone access in Settings → Privacy & security → Microphone (including desktop app access).",
+      "macos": "Grant microphone access in System Settings → Privacy & Security → Microphone.",
+      "linux": "Grant microphone access in your system's sound or privacy settings."
+    },
+    "notSignedInTitle": "Sign in required",
+    "notSignedIn": "Please sign in to use transcription.",
+    "noActiveSubscriptionTitle": "Subscription required",
+    "noActiveSubscription": "An active subscription is required to use transcription.",
+    "noModelSelectedTitle": "No model selected",
+    "noModelSelected": "Choose a model in Settings → Models.",
+    "noInputDeviceTitle": "No Microphone Found",
+    "noInputDevice": "No audio input device was detected. Please connect a microphone or headset and try again.",
+    "networkUnavailableTitle": "No Network Connection",
+    "networkUnavailable": "Please check your internet connection. Try again once the connection is restored.",
+    "networkTranscriptionFailed": "Transcription failed because the network connection was lost. Your audio has been saved. Please check your connection and try again.",
+    "networkTranscriptionFailedNotSaved": "Transcription failed because the network connection was lost. This recording was not kept. Please check your connection and record again.",
+    "recordingFailed": "Failed to start recording. Please try again.",
+    "modelLoadFailed": "Failed to load model: {{model}}",
+    "modelLoadFailedDescription": "Please try again. If the problem persists, restart the app.",
+    "gpuFallbackTitle": "Running on the CPU",
+    "gpuFallbackVram": "This model needs about {{needed}} MB of graphics memory but only {{available}} MB is free, so it runs on the CPU. Transcription will be slower.",
+    "gpuFallbackAfterCrash": "The app closed unexpectedly while the graphics card was in use, so this session runs on the CPU. Transcription will be slower. It goes back to the graphics card the next time you start the app.",
+    "modelLoadFailedUnknown": "unknown model",
+    "modelDownloadFailed": "Model download failed. Please check your network connection and try again.",
+    "transcriptionFailed": "Transcription failed. Please try again.",
+    "pasteFailedTitle": "Failed to Paste Text",
+    "pasteFailed": "Text could not be pasted into the active application.",
+    "transcriptionFailedTitle": "Transcription Failed"
+  },
+  "appLanguage": {
+    "title": "Application Language",
+    "description": "Change the language of the Anonen interface"
+  },
+  "overlay": {
+    "preparing": "Preparing (first run)...",
+    "transcribing": "Transcribing...",
+    "processing": "Processing...",
+    "lowVolume": "Low volume",
+    "limitWarning": "Stopping soon"
+  },
+  "authOnboarding": {
+    "title": "Sign In",
+    "checkingSubscription": "Checking subscription status...",
+    "noAccountGuide": "Don't have an account? Register and subscribe at anonen.net",
+    "noSubscription": "No active subscription found. Please subscribe at anonen.net",
+    "subscriptionCheckFailed": "Could not check your subscription. Please try \"Check again\" in a moment.",
+    "retrySubscription": "Check again",
+    "switchAccount": "Use a different account",
+    "viewHistory": "View transcription history"
+  },
+  "anonenCloud": {
+    "title": "あのねん",
+    "signInPrompt": "Sign in to use あのねん. We'll email a 6-digit code.",
+    "emailPlaceholder": "you@example.com",
+    "otpPlaceholder": "6-digit code",
+    "sendOtp": "Send code",
+    "resendOtp": "Resend",
+    "resendCooldown": "Resend ({{seconds}}s)",
+    "retryCaptcha": "Retry security check",
+    "captchaFrameTitle": "Security check",
+    "verify": "Sign in",
+    "back": "Back",
+    "logout": "Sign out",
+    "signedIn": "Signed in",
+    "signedInAs": "Signed in as {{email}}",
+    "usageSection": "Usage",
+    "weekly": "This week",
+    "monthly": "This month",
+    "weekResets": "Resets {{when}} (JST)",
+    "monthResets": "Resets on {{when}} (billing date, JST)",
+    "subscriptionStatus": "Subscription: {{status}}",
+    "subscriptionStatuses": {
+      "trialing": "Free trial (half weekly cap)",
+      "active": "Active",
+      "past_due": "Payment pending",
+      "canceled": "Canceled",
+      "unpaid": "Payment error (service paused)",
+      "incomplete": "Setup incomplete",
+      "incomplete_expired": "Setup expired",
+      "paused": "Paused"
+    },
+    "pastDueWarning": "Payment failed. Your subscription will be canceled if not resolved. Update your card at anonen.net (Account page).",
+    "noUsageYet": "No usage data yet. Run a transcription or refresh.",
+    "refresh": "Refresh",
+    "errors": {
+      "emailRequired": "Enter your email first.",
+      "emailInvalid": "Enter a valid email address.",
+      "captchaRequired": "Complete the security check before requesting a code.",
+      "captchaUnavailable": "The security check could not be loaded. Check your connection and try again.",
+      "tokenRequired": "Enter the 6-digit code from your email.",
+      "rateLimited": "Please wait a moment before trying again (once per 60 seconds)",
+      "otpRequestFailed": "Failed to send the verification code. Please try again later.",
+      "verifyFailed": "Verification failed. Please check the code and try again.",
+      "sessionEnded": "You are no longer signed in. Please sign in again.",
+      "usageRefreshFailed": "Could not load usage data. Please try again later."
+    },
+    "toast": {
+      "subscriptionRequired": "あのねん: subscription required",
+      "subscriptionGuide": "No active subscription found. Please subscribe at anonen.net",
+      "capReached": "あのねん: {{which}} cap reached",
+      "capWindow": {
+        "week": "Weekly",
+        "month": "Monthly",
+        "unknown": "Usage"
+      },
+      "capResetsAt": "Resets by {{when}} (JST) at the latest.",
+      "capWait": "Please wait until the limit resets.",
+      "capSuspended": "あのねん: cloud use is paused",
+      "capSuspendedWait": "Please wait until it resumes.",
+      "capResumesAt": "Resumes by {{when}} (JST) at the latest.",
+      "capLocalGuide": "Switch to a local model in Settings to keep going.",
+      "capRecordingKept": "This recording is kept in History and can be re-transcribed there.",
+      "capRecordingNotKept": "This recording was not kept.",
+      "lowRemaining": "あのねん: running low",
+      "lowRemainingDetail": "About {{remaining}} left before the limit.",
+      "switched": "Switched to {{target}}",
+      "switchFailed": "Failed to switch to {{target}}",
+      "modelRetired": "This model has been discontinued. Please choose a new model.",
+      "modelRetiredSwitch": "Switch to recommended model",
+      "noRecommendedModel": "No recommended model available. Pick a model in Settings → Models.",
+      "logoutFailed": "Sign-out failed. Please try again.",
+      "audioTooLong": "The recording exceeds the per-recording limit",
+      "audioTooLongGuide": "The recording is kept in History — you can re-transcribe it there with a local model.",
+      "audioTooLongGuideNotSaved": "This recording was not kept. Please record again in shorter parts."
+    },
+    "longWindowBinds": "The 28-day limit runs out first: {{remaining}} left",
+    "remainingPercent": "{{percent}}% left",
+    "trialCapNote": "Usable up to here during the trial. The whole bar unlocks with a subscription"
+  },
+  "modelDataPolicy": {
+    "intro": "Choosing this model sends your recordings to the provider below.",
+    "introCurrent": "This model is selected: your recordings are being sent to the provider below. You have not yet agreed to how it currently handles audio. Closing this without \"Use this model\" clears the selection.",
+    "destination": "Audio goes to",
+    "trainingLabel": "Used for training",
+    "retentionLabel": "Kept by the provider",
+    "unknown": "Not verified",
+    "unknownNote": "The app could not fetch the provider's policy. It will update once a connection is available.",
+    "seePolicy": "The privacy policy states this with sources. You can check it again in settings at any time.",
+    "cancel": "Cancel",
+    "accept": "Use this model",
+    "training": {
+      "no": "No",
+      "optOut": "No (we have turned off sharing for training)",
+      "yes": "Yes"
+    },
+    "retention": {
+      "none": "Not stored",
+      "days": "Kept {{days}} days, then deleted",
+      "unspecified": "No stated deletion period"
+    },
+    "localOnly": "Not applicable — audio never leaves this PC",
+    "languages": "Languages",
+    "translation": "Translation",
+    "usage": "Quota"
+  },
+  "linuxShortcut": {
+    "title": "Shortcuts aren’t working yet",
+    "body": "This session hasn’t been granted permission to read key input. Quit the app and open it again. If that doesn’t help, log out and log back in."
+  },
+  "micClipping": {
+    "title": "Your microphone is clipping",
+    "body": "The input volume is too high and the audio is distorting. This happens before recording, so it can't be repaired afterwards. Turn the input volume down, then record again to check."
+  }
+}
