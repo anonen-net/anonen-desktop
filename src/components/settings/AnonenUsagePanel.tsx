@@ -41,7 +41,16 @@ const WeekBar: React.FC<{ usage: AsrGatewayUsage }> = ({ usage }) => {
         )}
       </div>
       {trial && (
-        <div className="text-muted">{t("anonenCloud.trialCapNote")}</div>
+        <div className="text-muted">
+          {t("anonenCloud.trialCapNote", {
+            share:
+              Math.abs(usablePct - 50) < 1
+                ? t("anonenCloud.trialShareHalf")
+                : t("anonenCloud.trialSharePct", {
+                    pct: Math.round(usablePct),
+                  }),
+          })}
+        </div>
       )}
     </>
   );

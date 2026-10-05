@@ -930,7 +930,9 @@
     },
     "longWindowBinds": "The 28-day limit runs out first: {{remaining}} left",
     "remainingPercent": "{{percent}}% left",
-    "trialCapNote": "Usable up to here during the trial. The whole bar unlocks with a subscription"
+    "trialCapNote": "Only {{share}} is usable during the trial. The whole bar unlocks with a subscription",
+    "trialShareHalf": "half",
+    "trialSharePct": "about {{pct}}%"
   },
   "modelDataPolicy": {
     "intro": "Choosing this model sends your recordings to the provider below.",

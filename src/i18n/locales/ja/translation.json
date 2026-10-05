@@ -930,7 +930,9 @@
     },
     "longWindowBinds": "直近 28 日の上限が先に当たります（残り {{remaining}}）",
     "remainingPercent": "残り {{percent}}%",
-    "trialCapNote": "お試し中に使えるのはここまで。契約すると全部使えます"
+    "trialCapNote": "お試し中に使えるのは{{share}}だけ。契約すると全部使えます",
+    "trialShareHalf": "半分",
+    "trialSharePct": "約{{pct}}%"
   },
   "modelDataPolicy": {
     "intro": "このモデルを選ぶと、録音した音声は次の提供元へ送られます。",
