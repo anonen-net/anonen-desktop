@@ -427,6 +427,8 @@ pub fn run(cli_args: CliArgs) {
             shortcut::update_custom_words,
             shortcut::suspend_all_bindings,
             shortcut::resume_all_bindings,
+            shortcut::start_shortcut_probe,
+            shortcut::stop_shortcut_probe,
             shortcut::change_mute_while_recording_setting,
             shortcut::change_append_trailing_space_setting,
             shortcut::change_lazy_stream_close_setting,

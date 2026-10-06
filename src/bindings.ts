@@ -494,6 +494,24 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
+
+  async startShortcutProbe(): Promise<Result<null, string>> {
+    try {
+      return { status: "ok", data: await TAURI_INVOKE("start_shortcut_probe") };
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      else return { status: "error", error: e as any };
+    }
+  },
+
+  async stopShortcutProbe(): Promise<Result<null, string>> {
+    try {
+      return { status: "ok", data: await TAURI_INVOKE("stop_shortcut_probe") };
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      else return { status: "error", error: e as any };
+    }
+  },
   async changeMuteWhileRecordingSetting(
     enabled: boolean,
   ): Promise<Result<null, string>> {

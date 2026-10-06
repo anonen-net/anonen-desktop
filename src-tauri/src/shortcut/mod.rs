@@ -248,6 +248,20 @@ pub fn resume_all_bindings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn start_shortcut_probe() -> Result<(), String> {
+    handler::set_shortcut_probe(true);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn stop_shortcut_probe() -> Result<(), String> {
+    handler::set_shortcut_probe(false);
+    Ok(())
+}
+
 #[derive(Serialize, Type)]
 pub struct ImplementationChangeResult {
     pub success: bool,

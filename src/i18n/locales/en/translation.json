@@ -151,6 +151,7 @@
       "description": "This key starts and stops recording. You will try it on the next screen.",
       "inputTitle": "Key to start recording",
       "inputDescription": "Click the box, then press the key you want.",
+      "pressed": "That key works",
       "changeLater": "If it clashes with another app, pick a different key. You can change it later in Settings.",
       "next": "Next"
     },

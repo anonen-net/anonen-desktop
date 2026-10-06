@@ -167,6 +167,9 @@ jobs:
           New-Item -ItemType Directory -Force release | Out-Null
           Get-ChildItem C:\t\release\bundle -Recurse -Include *.exe,*.msi | Copy-Item -Destination release
           if ((Get-ChildItem release).Count -eq 0) { throw "no installers were built" }
+          $nsis = Get-ChildItem release -Filter *-setup.exe | Select-Object -First 1
+          if (-not $nsis) { throw "no NSIS installer to publish" }
+          Copy-Item $nsis.FullName release/AnonenSetup.exe
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
