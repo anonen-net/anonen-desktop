@@ -9,6 +9,7 @@ import { ProgressBar } from "../shared";
 import { useSettings } from "../../hooks/useSettings";
 import { commands } from "../../bindings";
 import {
+  releaseTagUrl,
   resolvePortableInstallerUrl,
   PORTABLE_RELEASES_URL,
 } from "./portableInstaller";
@@ -34,6 +35,9 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const [portableInstallerUrl, setPortableInstallerUrl] = useState<string>(
     PORTABLE_RELEASES_URL,
   );
+
+  const [availableVersion, setAvailableVersion] = useState<string | null>(null);
+  const [showConfirmUpdate, setShowConfirmUpdate] = useState(false);
 
   const { settings, isLoading } = useSettings();
   const settingsLoaded = !isLoading && settings !== null;
@@ -86,6 +90,7 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
 
       if (update) {
         setUpdateAvailable(true);
+        setAvailableVersion(update.version);
         setShowUpToDate(false);
 
         setPortableInstallerUrl(
@@ -101,6 +106,7 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
         }
       } else {
         setUpdateAvailable(false);
+        setAvailableVersion(null);
 
         if (isManualCheckRef.current) {
           setShowUpToDate(true);
@@ -124,6 +130,15 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
     if (!updateChecksEnabled) return;
     isManualCheckRef.current = true;
     checkForUpdates();
+  };
+
+  const askToInstall = async () => {
+    if (!updateChecksEnabled) return;
+    if (await commands.isPortable()) {
+      setShowPortableUpdateDialog(true);
+      return;
+    }
+    setShowConfirmUpdate(true);
   };
 
   const installUpdate = async () => {
@@ -198,7 +213,7 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
 
   const getUpdateStatusAction = () => {
     if (!updateChecksEnabled) return undefined;
-    if (updateAvailable && !isInstalling) return installUpdate;
+    if (updateAvailable && !isInstalling) return askToInstall;
     if (!isChecking && !isInstalling && !updateAvailable)
       return handleManualUpdateCheck;
     return undefined;
@@ -212,6 +227,39 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
 
   return (
     <>
+      {showConfirmUpdate && availableVersion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border border-mid-gray/20 rounded-lg p-6 max-w-md w-full mx-4 space-y-4">
+            <h2 className="text-base font-semibold">
+              {t("footer.updateConfirmTitle", { version: availableVersion })}
+            </h2>
+            <button
+              type="button"
+              className="text-sm text-logo-primary underline hover:text-logo-primary/80"
+              onClick={() => openUrl(releaseTagUrl(availableVersion))}
+            >
+              {t("footer.updateConfirmSource")}
+            </button>
+            <div className="flex gap-2 justify-end">
+              <button
+                className="px-3 py-1.5 text-sm rounded border border-mid-gray/20 hover:bg-mid-gray/10 transition-colors"
+                onClick={() => setShowConfirmUpdate(false)}
+              >
+                {t("footer.updateLater")}
+              </button>
+              <button
+                className="px-3 py-1.5 text-sm rounded bg-logo-primary text-white hover:bg-logo-primary/80 transition-colors"
+                onClick={() => {
+                  setShowConfirmUpdate(false);
+                  void installUpdate();
+                }}
+              >
+                {t("footer.updateConfirmButton")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showPortableUpdateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-background border border-mid-gray/20 rounded-lg p-6 max-w-md w-full mx-4 space-y-4">

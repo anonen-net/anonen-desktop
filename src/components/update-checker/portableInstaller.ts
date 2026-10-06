@@ -1,5 +1,13 @@
-export const PORTABLE_RELEASES_URL =
-  "https://github.com/anonen-net/anonen-desktop/releases/latest";
+const RELEASES_BASE = "https://github.com/anonen-net/anonen-desktop/releases";
+
+export const PORTABLE_RELEASES_URL = `${RELEASES_BASE}/latest`;
+
+export function releaseTagUrl(version: string): string {
+  const v = version.replace(/^v/, "");
+  return /^\d+\.\d+\.\d+$/.test(v)
+    ? `${RELEASES_BASE}/tag/v${v}`
+    : RELEASES_BASE;
+}
 
 export function resolvePortableInstallerUrl(
   rawJson: Record<string, unknown> | undefined,

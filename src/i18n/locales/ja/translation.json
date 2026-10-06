@@ -739,6 +739,10 @@
   "footer": {
     "checkingUpdates": "アップデートを確認中…",
     "updateAvailableShort": "アップデートあり",
+    "updateConfirmTitle": "v{{version}} にアップデートしますか？",
+    "updateConfirmSource": "この版の中身を GitHub で見る",
+    "updateConfirmButton": "アップデートする",
+    "updateLater": "あとで",
     "upToDate": "最新です",
     "updateCheckingDisabled": "アップデート確認無効",
     "downloading": "ダウンロード中… {{progress}}%",
