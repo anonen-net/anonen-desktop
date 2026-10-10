@@ -1,6 +1,6 @@
 [package]
 name = "anonen"
-version = "1.0.122"
+version = "1.0.123"
 description = "Anonen - speech-to-text"
 authors = []
 edition = "2021"

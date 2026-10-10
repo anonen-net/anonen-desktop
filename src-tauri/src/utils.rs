@@ -255,9 +255,9 @@ mod tests {
 
     #[test]
     fn the_spelling_of_the_home_directory_may_differ_in_case() {
-        let home = Path::new("C:\\Users\\Mei");
+        let home = Path::new("C:\\Users\\Example-User");
         assert_eq!(
-            redact_home_paths_within("open c:\\users\\mei\\logs", Some(home)),
+            redact_home_paths_within("open c:\\users\\example-user\\logs", Some(home)),
             "open ~\\logs"
         );
     }

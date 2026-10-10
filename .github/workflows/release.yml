@@ -211,10 +211,20 @@ jobs:
 
           Get-Content release/latest.json
 
+      - name: Take the release notes from the release commit
+        shell: bash
+        run: |
+          git log -1 --format=%b > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::the release commit has no release notes"
+            exit 1
+          fi
+          cat release-notes.md
+
       - name: Publish release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $files = Get-ChildItem release | ForEach-Object { $_.FullName }
-          gh release create $env:GITHUB_REF_NAME $files --title "Release $env:GITHUB_REF_NAME" --notes "Verified release build."
+          gh release create $env:GITHUB_REF_NAME $files --title "Release $env:GITHUB_REF_NAME" --notes-file release-notes.md
