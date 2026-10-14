@@ -110,6 +110,8 @@ const settingUpdaters: {
     ),
   translate_to_english: (value) =>
     commands.changeTranslateToEnglishSetting(value as boolean),
+  cloud_remove_fillers: (value) =>
+    commands.changeCloudRemoveFillersSetting(value as boolean),
   selected_language: (value) =>
     commands.changeSelectedLanguageSetting(value as string),
   overlay_position: (value) =>

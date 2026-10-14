@@ -29,6 +29,7 @@ ${StrLoc}
 
 !define MANUFACTURER "{{manufacturer}}"
 !define PRODUCTNAME "{{product_name}}"
+!define SHORTCUTNAME "あのねん (${PRODUCTNAME})"
 !define VERSION "{{version}}"
 !define VERSIONWITHBUILD "{{version_with_build}}"
 !define HOMEPAGE "{{homepage}}"
@@ -733,7 +734,7 @@ Section Install
 
     WriteRegStr SHCTX "${UNINSTKEY}" "MainBinaryName" "${MAINBINARYNAME}.exe"
 
-    WriteRegStr SHCTX "${UNINSTKEY}" "DisplayName" "${PRODUCTNAME}"
+    WriteRegStr SHCTX "${UNINSTKEY}" "DisplayName" "${SHORTCUTNAME}"
     WriteRegStr SHCTX "${UNINSTKEY}" "DisplayIcon" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\""
     WriteRegStr SHCTX "${UNINSTKEY}" "DisplayVersion" "${VERSION}"
     WriteRegStr SHCTX "${UNINSTKEY}" "Publisher" "${MANUFACTURER}"
@@ -865,6 +866,26 @@ Section Uninstall
       !insertmacro UnpinShortcut "$DESKTOP\${PRODUCTNAME}.lnk"
       Delete "$DESKTOP\${PRODUCTNAME}.lnk"
     ${EndIf}
+
+    !insertmacro IsShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder\${SHORTCUTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$SMPROGRAMS\$AppStartMenuFolder\${SHORTCUTNAME}.lnk"
+      Delete "$SMPROGRAMS\$AppStartMenuFolder\${SHORTCUTNAME}.lnk"
+      RMDir "$SMPROGRAMS\$AppStartMenuFolder"
+    ${EndIf}
+    !insertmacro IsShortcutTarget "$SMPROGRAMS\${SHORTCUTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$SMPROGRAMS\${SHORTCUTNAME}.lnk"
+      Delete "$SMPROGRAMS\${SHORTCUTNAME}.lnk"
+    ${EndIf}
+    !insertmacro IsShortcutTarget "$DESKTOP\${SHORTCUTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $0
+    ${If} $0 = 1
+      !insertmacro UnpinShortcut "$DESKTOP\${SHORTCUTNAME}.lnk"
+      Delete "$DESKTOP\${SHORTCUTNAME}.lnk"
+    ${EndIf}
   ${EndIf}
 
   !if "${INSTALLMODE}" == "both"
@@ -925,6 +946,18 @@ Function un.SkipIfPassive
   ${IfThen} $PassiveMode = 1  ${|} Abort ${|}
 FunctionEnd
 
+!macro RenameOwnShortcut DIR
+  !insertmacro IsShortcutTarget "${DIR}\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+  Pop $0
+  ${If} $0 = 1
+    ${If} ${FileExists} "${DIR}\${SHORTCUTNAME}.lnk"
+      Delete "${DIR}\${PRODUCTNAME}.lnk"
+    ${Else}
+      Rename "${DIR}\${PRODUCTNAME}.lnk" "${DIR}\${SHORTCUTNAME}.lnk"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
 Function CreateOrUpdateStartMenuShortcut
   StrCpy $R0 0
 
@@ -942,6 +975,9 @@ Function CreateOrUpdateStartMenuShortcut
     StrCpy $R0 1
   ${EndIf}
 
+  !insertmacro RenameOwnShortcut "$SMPROGRAMS\$AppStartMenuFolder"
+  !insertmacro RenameOwnShortcut "$SMPROGRAMS"
+
   ${If} $R0 = 1
     Return
   ${EndIf}
@@ -955,11 +991,11 @@ Function CreateOrUpdateStartMenuShortcut
 
   !if "${STARTMENUFOLDER}" != ""
     CreateDirectory "$SMPROGRAMS\$AppStartMenuFolder"
-    CreateShortcut "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
+    CreateShortcut "$SMPROGRAMS\$AppStartMenuFolder\${SHORTCUTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\$AppStartMenuFolder\${SHORTCUTNAME}.lnk"
   !else
-    CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+    CreateShortcut "$SMPROGRAMS\${SHORTCUTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${SHORTCUTNAME}.lnk"
   !endif
 FunctionEnd
 
@@ -968,8 +1004,11 @@ Function CreateOrUpdateDesktopShortcut
   Pop $0
   ${If} $0 = 1
     !insertmacro SetShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro RenameOwnShortcut "$DESKTOP" ; --- ANONEN: 表示名 --- 付け替えてから戻る
     Return
   ${EndIf}
+
+  !insertmacro RenameOwnShortcut "$DESKTOP"
 
   ${If} $WixMode = 0
     ${If} $UpdateMode = 1
@@ -978,6 +1017,6 @@ Function CreateOrUpdateDesktopShortcut
     ${EndIf}
   ${EndIf}
 
-  CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-  !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
+  CreateShortcut "$DESKTOP\${SHORTCUTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+  !insertmacro SetLnkAppUserModelId "$DESKTOP\${SHORTCUTNAME}.lnk"
 FunctionEnd

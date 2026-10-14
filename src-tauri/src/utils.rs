@@ -193,9 +193,102 @@ pub fn is_kde_wayland() -> bool {
     is_wayland() && is_kde_plasma()
 }
 
+const UPDATE_MARKER: &str = "show-window-after-update";
+
+pub const UPDATE_MARKER_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+
+pub fn write_update_marker(dir: &Path, now: std::time::SystemTime) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    let secs = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    std::fs::write(dir.join(UPDATE_MARKER), secs.to_string())
+}
+
+pub fn take_update_marker(dir: &Path, now: std::time::SystemTime) -> bool {
+    let path = dir.join(UPDATE_MARKER);
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return false;
+    };
+    let _ = std::fs::remove_file(&path);
+    let Ok(secs) = text.trim().parse::<u64>() else {
+        return false;
+    };
+
+    let Some(written) = std::time::UNIX_EPOCH.checked_add(std::time::Duration::from_secs(secs))
+    else {
+        return false;
+    };
+    let age = now.duration_since(written).unwrap_or_else(|e| e.duration());
+    age <= UPDATE_MARKER_MAX_AGE
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "anonen-update-marker-{}-{}",
+            name,
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        dir
+    }
+
+    #[test]
+    fn a_fresh_update_marker_shows_the_window_once() {
+        let dir = temp_dir("fresh");
+        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_791_600_000);
+        write_update_marker(&dir, t).expect("write");
+
+        assert!(take_update_marker(
+            &dir,
+            t + std::time::Duration::from_secs(40)
+        ));
+        assert!(!take_update_marker(
+            &dir,
+            t + std::time::Duration::from_secs(41)
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_old_or_broken_update_marker_is_dropped_without_showing() {
+        let dir = temp_dir("old");
+        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_791_600_000);
+        write_update_marker(&dir, t).expect("write");
+
+        assert!(!take_update_marker(
+            &dir,
+            t + UPDATE_MARKER_MAX_AGE + std::time::Duration::from_secs(1)
+        ));
+        assert!(!dir.join(UPDATE_MARKER).exists());
+        std::fs::write(dir.join(UPDATE_MARKER), "not a number").expect("write");
+        assert!(!take_update_marker(&dir, t));
+        assert!(!dir.join(UPDATE_MARKER).exists());
+
+        std::fs::write(dir.join(UPDATE_MARKER), u64::MAX.to_string()).expect("write");
+        assert!(!take_update_marker(&dir, t));
+        assert!(!dir.join(UPDATE_MARKER).exists());
+
+        assert!(!take_update_marker(&dir, t));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_clock_that_went_back_a_little_still_counts_as_fresh() {
+        let dir = temp_dir("clock");
+        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_791_600_000);
+        write_update_marker(&dir, t).expect("write");
+        assert!(take_update_marker(
+            &dir,
+            t - std::time::Duration::from_secs(5)
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn loggable_path_folds_the_home_directory_away() {

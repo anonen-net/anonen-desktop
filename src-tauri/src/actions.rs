@@ -713,7 +713,7 @@ impl ShortcutAction for TranscribeAction {
                     let history_enabled = crate::settings::get_history_retention(&ah).enabled();
 
                     let sample_count = samples.len();
-                    let file_name = format!("anonen-{}.wav", chrono::Utc::now().timestamp());
+                    let file_name = crate::managers::history::new_recording_file_name();
                     let wav_path = hm.recordings_dir().join(&file_name);
                     let wav_path_for_verify = wav_path.clone();
                     let samples_for_wav = samples.clone();
@@ -730,6 +730,21 @@ impl ShortcutAction for TranscribeAction {
 
                     if is_cancelled() {
                         log::info!("[pipeline] cancelled during transcription, discarding result");
+
+                        if let Some(handle) = wav_handle {
+                            let path = wav_path_for_verify.clone();
+                            tauri::async_runtime::spawn(async move {
+                                let _ = handle.await;
+                                if let Err(e) = std::fs::remove_file(&path) {
+                                    if e.kind() != std::io::ErrorKind::NotFound {
+                                        log::warn!(
+                                            "[pipeline] could not remove the cancelled recording: {}",
+                                            e
+                                        );
+                                    }
+                                }
+                            });
+                        }
                         return;
                     }
 
@@ -766,7 +781,9 @@ impl ShortcutAction for TranscribeAction {
                                 transcription.len(),
                             );
 
-                            record_transcription_stats(&ah, transcribe_ms);
+                            if !transcription.trim().is_empty() {
+                                record_transcription_stats(&ah, transcribe_ms, sample_count);
+                            }
 
                             if post_process {
                                 show_processing_overlay(&ah);
@@ -1020,18 +1037,27 @@ pub(crate) fn raise_own_window_notice(
 pub(crate) struct TranscriptionStatsPayload {
     model_id: String,
     asr_ms: u64,
+
+    audio_ms: u64,
 }
 
-pub(crate) fn record_transcription_stats(app: &AppHandle, transcribe_ms: u128) {
+pub(crate) fn record_transcription_stats(
+    app: &AppHandle,
+    transcribe_ms: u128,
+    audio_samples: usize,
+) {
     let model_id = get_settings(app).selected_model.clone();
-    if model_id.is_empty() || transcribe_ms == 0 {
+    if model_id.is_empty() || transcribe_ms == 0 || audio_samples == 0 {
         return;
     }
+    let audio_ms = audio_samples as u64 * 1000
+        / u64::from(crate::audio_toolkit::constants::WHISPER_SAMPLE_RATE);
     let _ = app.emit(
         "transcription-stats-recorded",
         TranscriptionStatsPayload {
             model_id,
             asr_ms: transcribe_ms as u64,
+            audio_ms,
         },
     );
 }

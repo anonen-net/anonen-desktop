@@ -53,7 +53,7 @@
       "speed": "speed",
       "pricePerHour": "${{price}}/hr",
       "measured": "measured {{seconds}}s ({{count}} runs)",
-      "speedFromMeasured": "Relative to what this machine actually measured"
+      "speedFromMeasured": "Relative value blended with what this machine actually measured"
     },
     "models": {
       "small": {
@@ -169,6 +169,7 @@
   },
   "modelSelector": {
     "custom": "Custom",
+    "preview": "Preview",
     "localModel": "Local",
     "active": "Active",
     "switching": "Switching...",
@@ -207,12 +208,18 @@
     "details": "Details",
     "languageSelectable": "Language can be set",
     "languageAutoOnly": "Auto-detect only",
-    "translationSupported": "Can translate to English",
-    "translationUnsupported": "No English translation"
+    "features": {
+      "translation": "English translation",
+      "fillerReduction": "Filler reduction"
+    }
   },
   "settings": {
     "modelSettings": {
-      "title": "Transcription"
+      "title": "Transcription",
+      "removeFillers": {
+        "label": "Reduce “um” and “uh”",
+        "description": "Writes with fewer filler words. Turn off to keep them as spoken."
+      }
     },
     "general": {
       "version": "Anonen v{{version}}",
@@ -538,6 +545,8 @@
       "retranscribeWav": "Re-transcribe with WAV",
       "retranscribedOpus": "Re-transcribed with Opus compression",
       "retranscribedWav": "Re-transcribed with raw WAV",
+      "retranscribeOpusRoundTrip": "Re-transcribe with Opus decoded back to WAV",
+      "retranscribedOpusRoundTrip": "Re-transcribed with Opus decoded back to WAV",
       "postProcessed": "Post-processed",
       "transcribing": "Transcribing...",
       "transcriptionFailed": "Transcription failed. You can re-transcribe using the retry icon.",
@@ -562,6 +571,20 @@
     },
     "debug": {
       "title": "Debug",
+      "firstRun": {
+        "title": "First-run screens",
+        "button": "Show again",
+        "failed": "Could not show it again",
+        "disclosure": {
+          "label": "Confirmation when first choosing a model",
+          "description": "Clears every \"Use\" record so the confirmation appears again for each model. The installed app shows it once more on its next start, too.",
+          "done": "Cleared. The confirmation appears when you choose a model."
+        },
+        "tutorial": {
+          "label": "Tutorial",
+          "description": "Reloads the window and starts the tutorial from the beginning (development build only)."
+        }
+      },
       "logDirectory": {
         "title": "Log Directory",
         "description": "Location where log files are stored"
@@ -927,7 +950,6 @@
       "switchFailed": "Failed to switch to {{target}}",
       "modelRetired": "This model has been discontinued. Please choose a new model.",
       "modelRetiredSwitch": "Switch to recommended model",
-      "noRecommendedModel": "No recommended model available. Pick a model in Settings → Models.",
       "logoutFailed": "Sign-out failed. Please try again.",
       "audioTooLong": "The recording exceeds the per-recording limit",
       "audioTooLongGuide": "The recording is kept in History — you can re-transcribe it there with a local model.",
@@ -948,6 +970,7 @@
     "unknown": "Not verified",
     "unknownNote": "The app could not fetch the provider's policy. It will update once a connection is available.",
     "seePolicy": "The privacy policy states this with sources. You can check it again in settings at any time.",
+    "openPolicy": "Open the privacy policy",
     "cancel": "Cancel",
     "accept": "Use this model",
     "training": {
@@ -962,8 +985,12 @@
     },
     "localOnly": "Not applicable — audio never leaves this PC",
     "languages": "Languages",
-    "translation": "Translation",
-    "usage": "Quota"
+    "usage": "Quota",
+    "preview": {
+      "line1": "We added this on a trial basis because it was very accurate in our own tests.",
+      "line2": "The provider still offers it as a preview and advises against using it with personal information.",
+      "line3": "Once it is generally available, we will review the terms again and add it officially."
+    }
   },
   "linuxShortcut": {
     "title": "Shortcuts aren’t working yet",

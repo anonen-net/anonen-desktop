@@ -1,8 +1,12 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { FlaskConical } from "lucide-react";
 import type { ModelInfo } from "@/bindings";
+import Badge from "../ui/Badge";
 import { getTranslatedModelName } from "../../lib/utils/modelTranslation";
 import { compareModelsForDisplay } from "../../lib/utils/modelOrder";
+import { isPreview, policySubject } from "../../lib/modelDataPolicy";
+import { useAnonenCloudStore } from "../../stores/anonenCloudStore";
 
 interface ModelDropdownProps {
   models: ModelInfo[];
@@ -16,6 +20,8 @@ const ModelDropdown: React.FC<ModelDropdownProps> = ({
   onModelSelect,
 }) => {
   const { t } = useTranslation();
+
+  const cloudModels = useAnonenCloudStore((s) => s.cloudModels);
 
   const downloadedModels = models
     .filter((m) => m.is_downloaded)
@@ -60,6 +66,16 @@ const ModelDropdown: React.FC<ModelDropdownProps> = ({
                       <span className="ms-1.5 text-[10px] font-medium text-muted/80 uppercase">
                         {t("modelSelector.custom")}
                       </span>
+                    )}
+
+                    {isPreview(policySubject(model.id, cloudModels)) && (
+                      <Badge variant="preview" size="sm" className="ms-1.5">
+                        <FlaskConical
+                          className="w-2.5 h-2.5 me-0.5"
+                          aria-hidden="true"
+                        />
+                        {t("modelSelector.preview")}
+                      </Badge>
                     )}
                   </div>
                 </div>

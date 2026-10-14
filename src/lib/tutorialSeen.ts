@@ -13,3 +13,9 @@ export const markTutorialSeen = (): void => {
     localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
   } catch {}
 };
+
+export const forgetTutorialSeen = (): void => {
+  try {
+    localStorage.removeItem(TUTORIAL_SEEN_KEY);
+  } catch {}
+};

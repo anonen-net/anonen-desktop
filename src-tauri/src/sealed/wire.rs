@@ -42,6 +42,7 @@ pub fn seal(
     request_id: &str,
     model: &str,
     language: Option<&str>,
+    remove_fillers: bool,
     audio: &[u8],
 ) -> Result<SealedEnvelope, SealedError> {
     if public_key.len() != PUBLIC_KEY_BYTES {
@@ -61,6 +62,10 @@ pub fn seal(
 
     if let Some(l) = language.filter(|l| !l.trim().is_empty() && *l != "auto") {
         header.insert("language".into(), l.into());
+    }
+
+    if remove_fillers {
+        header.insert("remove_fillers".into(), true.into());
     }
     let header = serde_json::Value::Object(header).to_string().into_bytes();
     if header.len() > MAX_HEADER_BYTES {
@@ -265,6 +270,7 @@ mod tests {
             "0d5b9f2e-0000-4111-8222-333344445555",
             "openai/whisper-1",
             Some("ja"),
+            false,
             &audio,
         )
         .unwrap();
@@ -293,6 +299,7 @@ mod tests {
             "0d5b9f2e-0000-4111-8222-333344445555",
             "openai/whisper-1",
             Some("auto"),
+            false,
             &[0u8; 8],
         )
         .unwrap();
@@ -300,6 +307,34 @@ mod tests {
         assert!(header.get("language").is_none());
 
         assert_eq!("openai/whisper-1", header["model"].as_str().unwrap());
+    }
+
+    #[test]
+    fn remove_fillers_is_declared_only_when_on() {
+        let on = seal(
+            &public_key(),
+            "0d5b9f2e-0000-4111-8222-333344445555",
+            "azure/MAI-Transcribe-2",
+            Some("ja"),
+            true,
+            &[0u8; 8],
+        )
+        .unwrap();
+        let (header, _) = open_sealed_request(&on.body);
+
+        assert_eq!(Some(true), header["remove_fillers"].as_bool());
+
+        let off = seal(
+            &public_key(),
+            "0d5b9f2e-0000-4111-8222-333344445555",
+            "azure/MAI-Transcribe-2",
+            Some("ja"),
+            false,
+            &[0u8; 8],
+        )
+        .unwrap();
+        let (header, _) = open_sealed_request(&off.body);
+        assert!(header.get("remove_fillers").is_none());
     }
 
     #[test]
@@ -311,6 +346,7 @@ mod tests {
                     "0d5b9f2e-0000-4111-8222-333344445555",
                     id,
                     None,
+                    false,
                     &[0u8; 8],
                 )
                 .is_err(),
@@ -327,6 +363,7 @@ mod tests {
             "0d5b9f2e-0000-4111-8222-333344445555",
             "openai/whisper-1",
             None,
+            false,
             b"SECRETAUDIOMARKER",
         )
         .unwrap();
@@ -362,6 +399,7 @@ mod tests {
             "0d5b9f2e-0000-4111-8222-333344445555",
             "openai/whisper-1",
             None,
+            false,
             &[0u8; 4]
         )
         .is_err());

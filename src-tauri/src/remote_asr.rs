@@ -155,10 +155,24 @@ pub struct AsrGatewayModel {
 
     #[serde(default)]
     pub retention_days: Option<i64>,
+
+    #[serde(default = "default_release_stage")]
+    pub release_stage: String,
+
+    #[serde(default)]
+    pub supports_filler_removal: bool,
 }
 
 fn default_unknown_policy() -> String {
     "unknown".to_string()
+}
+
+fn default_release_stage() -> String {
+    "ga".to_string()
+}
+
+pub fn wants_filler_removal(setting_on: bool, model_supports: bool) -> bool {
+    setting_on && model_supports
 }
 
 pub fn fetch_gateway_models(
@@ -208,6 +222,7 @@ pub(crate) fn transcribe_via_asr_gateway_v1(
     request_id: &str,
     model: Option<&str>,
     language: Option<&str>,
+    remove_fillers: bool,
     request_timeout: Duration,
 ) -> Result<AsrGatewayOk, AsrGatewayErr> {
     if base_url.trim().is_empty() {
@@ -261,6 +276,10 @@ pub(crate) fn transcribe_via_asr_gateway_v1(
             form = form.text("language", lang.to_string());
         }
     }
+
+    if remove_fillers {
+        form = form.text("remove_fillers", "true");
+    }
     let build_ms = t_build.elapsed().as_millis();
 
     let t_send = Instant::now();
@@ -307,8 +326,9 @@ pub(crate) fn transcribe_via_asr_gateway_v1(
 
 fn checked_model(model: Option<&str>) -> Result<&str, AsrGatewayErr> {
     let id = model.map(str::trim).unwrap_or("");
+
     let shaped = match id.split_once('/') {
-        Some((provider, name)) => !provider.is_empty() && !name.is_empty() && !name.contains('/'),
+        Some((provider, name)) => !provider.is_empty() && !name.is_empty(),
         None => false,
     };
     if !shaped {
@@ -469,6 +489,7 @@ pub fn transcribe_via_asr_gateway_v1_sealed(
     request_id: &str,
     model: Option<&str>,
     language: Option<&str>,
+    remove_fillers: bool,
     request_timeout: Duration,
     enclave: &VerifiedEnclave,
 ) -> Result<AsrGatewayOk, AsrGatewayErr> {
@@ -498,6 +519,7 @@ pub fn transcribe_via_asr_gateway_v1_sealed(
         request_id,
         model,
         language.filter(|l| !l.is_empty()),
+        remove_fillers,
         &audio.bytes,
     )
     .map_err(|e| gateway_client_err(0, "seal_failed", e.to_string()))?;
@@ -691,6 +713,7 @@ mod tests {
             "openai/gpt-transcribe",
             "mistral/voxtral-mini-2602",
             "alibaba-funasr/fun-asr-flash-realtime",
+            "openrouter/microsoft/mai-ds-r1",
         ] {
             assert_eq!(id, checked_model(Some(id)).expect("catalog id"));
         }
@@ -715,7 +738,7 @@ mod tests {
             assert_eq!(0, err.http_status);
         }
 
-        for id in ["/voxtral-mini-2602", "mistral/", "/", "a/b/c"] {
+        for id in ["/voxtral-mini-2602", "mistral/", "/", "//b"] {
             assert!(
                 checked_model(Some(id)).is_err(),
                 "must be refused: {:?}",
@@ -958,6 +981,35 @@ mod tests {
         let err = read_opened(200, r#"{"error":"cap_exceeded","which":"month"}"#)
             .expect_err("the seal says error");
         assert_eq!("cap_exceeded", err.code);
+    }
+
+    #[test]
+    fn a_catalog_row_without_the_new_keys_reads_as_ga_and_unsupported() {
+        let row: AsrGatewayModel = serde_json::from_str(
+            r#"{"id":"a/b","display_name":"B","provider":"a","description":""}"#,
+        )
+        .expect("old catalog rows still parse");
+        assert_eq!("ga", row.release_stage);
+        assert!(!row.supports_filler_removal);
+    }
+
+    #[test]
+    fn a_preview_row_reads_as_is() {
+        let row: AsrGatewayModel = serde_json::from_str(
+            r#"{"id":"azure/MAI-Transcribe-2","display_name":"MAI-Transcribe-2","provider":"azure",
+                "description":"","release_stage":"preview","supports_filler_removal":true}"#,
+        )
+        .expect("preview row parses");
+        assert_eq!("preview", row.release_stage);
+        assert!(row.supports_filler_removal);
+    }
+
+    #[test]
+    fn fillers_are_asked_for_only_when_the_setting_is_on_and_the_model_supports_it() {
+        assert!(wants_filler_removal(true, true));
+        assert!(!wants_filler_removal(true, false));
+        assert!(!wants_filler_removal(false, true));
+        assert!(!wants_filler_removal(false, false));
     }
 
     #[test]

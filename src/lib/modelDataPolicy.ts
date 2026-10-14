@@ -5,6 +5,7 @@ export function policyFingerprint(model: {
   training_use?: string | null;
   retention_kind?: string | null;
   retention_days?: number | null;
+  release_stage?: string | null;
 }): string {
   const training = model.training_use || "unknown";
   const retention = model.retention_kind || "unknown";
@@ -12,13 +13,20 @@ export function policyFingerprint(model: {
     model.retention_days === null || model.retention_days === undefined
       ? "-"
       : String(model.retention_days);
-  return `${model.id}@${training}/${retention}/${days}`;
+
+  const stage = model.release_stage === "preview" ? "/preview" : "";
+  return `${model.id}@${training}/${retention}/${days}${stage}`;
 }
 
 export type PolicySubject = Pick<
   AsrGatewayModel,
   "id" | "training_use" | "retention_kind" | "retention_days"
->;
+> &
+  Partial<Pick<AsrGatewayModel, "release_stage">>;
+
+export function isPreview(model: PolicySubject | null): boolean {
+  return model?.release_stage === "preview";
+}
 
 const ANONEN_CLOUD_PREFIX = "anonen-cloud:";
 

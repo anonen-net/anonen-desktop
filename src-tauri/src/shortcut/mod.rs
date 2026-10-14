@@ -516,6 +516,15 @@ pub fn change_translate_to_english_setting(app: AppHandle, enabled: bool) -> Res
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_cloud_remove_fillers_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.cloud_remove_fillers = enabled;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_selected_language_setting(app: AppHandle, language: String) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.selected_language = language;
@@ -1122,6 +1131,15 @@ pub fn acknowledge_model_data_policy(app: AppHandle, fingerprint: String) -> Res
         &settings.acknowledged_cloud_policies,
         &fingerprint,
     );
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn forget_model_data_policies(app: AppHandle) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.acknowledged_cloud_policies.clear();
     settings::write_settings(&app, settings);
     Ok(())
 }

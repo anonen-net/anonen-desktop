@@ -5,13 +5,20 @@ import { useAnonenCloudStore } from "@/stores/anonenCloudStore";
 import { useModelStore } from "@/stores/modelStore";
 import {
   isPolicyUnknown,
+  isPreview,
   retentionLine,
   trainingLine,
 } from "@/lib/modelDataPolicy";
 import { getLanguageDisplayText } from "@/lib/utils/languageDisplay";
+import { FlaskConical } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { toast } from "sonner";
+import Badge from "@/components/ui/Badge";
+
+const PRIVACY_PROVIDERS_URL = "https://anonen.net/legal/privacy#providers";
 
 export function ModelDataPolicyDialog() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const cardId = useAnonenCloudStore((s) => s.pendingPolicyCardId);
   const requiresAck = useAnonenCloudStore((s) => s.pendingPolicyRequiresAck);
   const isCurrent = useAnonenCloudStore((s) => s.pendingPolicyIsCurrent);
@@ -67,6 +74,20 @@ export function ModelDataPolicyDialog() {
             )}
           </p>
         )}
+
+        {isPreview(upstream) && (
+          <p className="text-xs leading-relaxed text-text/80">
+            <Badge variant="preview" size="sm" className="me-1.5 align-middle">
+              <FlaskConical className="w-2.5 h-2.5 me-0.5" aria-hidden="true" />
+              {t("modelSelector.preview")}
+            </Badge>
+            {[
+              t("modelDataPolicy.preview.line1"),
+              t("modelDataPolicy.preview.line2"),
+              t("modelDataPolicy.preview.line3"),
+            ].join(i18n.language.startsWith("ja") ? "" : " ")}
+          </p>
+        )}
         <div className="space-y-3 text-sm">
           <Row
             label={t("modelDataPolicy.destination")}
@@ -100,14 +121,7 @@ export function ModelDataPolicyDialog() {
                     : t("modelSelector.languageAutoOnly")
                 }
               />
-              <Row
-                label={t("modelDataPolicy.translation")}
-                value={
-                  card.supports_translation
-                    ? t("modelSelector.translationSupported")
-                    : t("modelSelector.translationUnsupported")
-                }
-              />
+
               {usageMultiplier !== 1 && (
                 <Row
                   label={t("modelDataPolicy.usage")}
@@ -128,9 +142,21 @@ export function ModelDataPolicyDialog() {
             {t("modelDataPolicy.unknownNote")}
           </p>
         )}
+
         {upstream && (
           <p className="text-xs text-text/60">
-            {t("modelDataPolicy.seePolicy")}
+            {t("modelDataPolicy.seePolicy")}{" "}
+            <button
+              type="button"
+              className="underline hover:text-logo-primary"
+              onClick={() => {
+                openUrl(PRIVACY_PROVIDERS_URL).catch(() =>
+                  toast.error(t("settings.about.legal.openFailed")),
+                );
+              }}
+            >
+              {t("modelDataPolicy.openPolicy")}
+            </button>
           </p>
         )}
         <div className="flex gap-2 justify-end">

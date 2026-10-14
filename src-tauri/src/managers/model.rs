@@ -100,6 +100,8 @@ pub struct RemoteModelConfig {
     pub base_url: String,
 
     pub model_id: String,
+
+    pub supports_filler_removal: bool,
 }
 
 pub const ANONEN_CLOUD_MODEL_PREFIX: &str = "anonen-cloud:";
@@ -304,6 +306,7 @@ impl ModelManager {
                     &cm.training_use,
                     &cm.retention_kind,
                     cm.retention_days,
+                    &cm.release_stage,
                 ),
             );
 
@@ -333,6 +336,7 @@ impl ModelManager {
                 RemoteModelConfig {
                     base_url: base_url.clone(),
                     model_id: cm.id.clone(),
+                    supports_filler_removal: cm.supports_filler_removal,
                 },
             );
         }

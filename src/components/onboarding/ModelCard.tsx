@@ -4,6 +4,7 @@ import {
   Check,
   Cloud,
   Download,
+  FlaskConical,
   Globe,
   HardDrive,
   Laptop,
@@ -12,10 +13,15 @@ import {
 } from "lucide-react";
 import type { ModelInfo } from "@/bindings";
 import {
-  medianMs,
-  relativeSpeedScores,
   useModelStatsStore,
+  type StatSample,
 } from "../../stores/modelStatsStore";
+import { useModelStore } from "../../stores/modelStore";
+import {
+  blendedSpeedScores,
+  medianMs,
+  perAudioSecond,
+} from "../../lib/speedBlend";
 import { formatModelSize } from "../../lib/utils/format";
 import {
   getTranslatedModelDescription,
@@ -25,6 +31,9 @@ import { getLanguageDisplayText } from "../../lib/utils/languageDisplay";
 import Badge from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { useAnonenCloudStore } from "../../stores/anonenCloudStore";
+import { isPreview, policySubject } from "../../lib/modelDataPolicy";
+import { modelFeatures } from "../../lib/modelFeatures";
+import { ModelFeatureBadge } from "../ui/ModelFeatureBadge";
 
 export type ModelCardStatus =
   | "downloadable"
@@ -49,7 +58,7 @@ interface ModelCardProps {
   downloadSpeed?: number;
   showRecommended?: boolean;
 
-  samples?: number[];
+  samples?: StatSample[];
 }
 
 const ModelCard: React.FC<ModelCardProps> = ({
@@ -72,15 +81,33 @@ const ModelCard: React.FC<ModelCardProps> = ({
 
   const isClickable = status === "available" || status === "downloadable";
 
-  const measuredMedianMs = samples ? medianMs(samples) : null;
+  const measuredMedianMs = samples ? medianMs(samples.map((s) => s.ms)) : null;
 
   const allStats = useModelStatsStore((s) => s.stats);
-  const relativeSpeed = React.useMemo(
-    () => relativeSpeedScores(allStats),
-    [allStats],
-  );
-  const speedScore = relativeSpeed[model.id] ?? model.speed_score;
-  const speedIsMeasured = relativeSpeed[model.id] !== undefined;
+  const allModels = useModelStore((s) => s.models);
+  const blendedSpeed = React.useMemo(() => {
+    const server: Record<string, number> = {};
+    for (const m of allModels) {
+      if (m.engine_type === "Remote" && m.id.startsWith("anonen-cloud:")) {
+        server[m.id] = m.speed_score;
+      }
+    }
+
+    const perSecond: Record<string, number[]> = {};
+    for (const [id, samples] of Object.entries(allStats)) {
+      perSecond[id] = perAudioSecond(samples);
+    }
+    return { scores: blendedSpeedScores(perSecond, server), perSecond };
+  }, [allStats, allModels]);
+  const speedScore = blendedSpeed.scores[model.id] ?? model.speed_score;
+
+  const speedIsMeasured =
+    blendedSpeed.scores[model.id] !== undefined &&
+    (blendedSpeed.perSecond[model.id]?.length ?? 0) > 0;
+
+  const cloudModels = useAnonenCloudStore((s) => s.cloudModels);
+  const preview = isPreview(policySubject(model.id, cloudModels));
+  const features = modelFeatures(model, cloudModels);
 
   const displayName = getTranslatedModelName(model, t);
   const displayDescription = getTranslatedModelDescription(model, t);
@@ -143,25 +170,46 @@ const ModelCard: React.FC<ModelCardProps> = ({
     >
       <div className="flex justify-between items-center w-full">
         <div className="flex flex-col items-start flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 min-w-0 max-w-full">
             <h3
-              className={`text-base font-semibold text-text ${isClickable ? "group-hover:text-logo-primary" : ""} transition-colors`}
+              title={displayName}
+              className={`min-w-0 truncate text-base font-semibold text-text ${isClickable ? "group-hover:text-logo-primary" : ""} transition-colors`}
             >
               {displayName}
             </h3>
+
+            {preview && (
+              <Badge variant="preview" size="sm">
+                <FlaskConical
+                  className="w-2.5 h-2.5 me-0.5"
+                  aria-hidden="true"
+                />
+                {t("modelSelector.preview")}
+              </Badge>
+            )}
             {showRecommended && model.is_recommended && (
-              <Badge variant="primary">{t("onboarding.recommended")}</Badge>
+              <Badge variant="primary" size="sm">
+                {t("onboarding.recommended")}
+              </Badge>
             )}
 
             {model.engine_type !== "Remote" && (
-              <Badge variant="primary">{t("modelSelector.localModel")}</Badge>
+              <Badge variant="primary" size="sm">
+                {t("modelSelector.localModel")}
+              </Badge>
             )}
             {model.is_custom && (
-              <Badge variant="secondary">{t("modelSelector.custom")}</Badge>
+              <Badge variant="secondary" size="sm">
+                {t("modelSelector.custom")}
+              </Badge>
             )}
+
+            {features.map((feature) => (
+              <ModelFeatureBadge key={feature} feature={feature} size="sm" />
+            ))}
             {status === "switching" && (
-              <Badge variant="secondary">
-                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              <Badge variant="secondary" size="sm">
+                <Loader2 className="w-2.5 h-2.5 me-0.5 animate-spin" />
                 {t("modelSelector.switching")}
               </Badge>
             )}
@@ -175,15 +223,15 @@ const ModelCard: React.FC<ModelCardProps> = ({
         {(model.accuracy_score > 0 ||
           model.speed_score > 0 ||
           measuredMedianMs !== null) && (
-          <div className="hidden sm:flex items-center ms-4">
+          <div className="hidden sm:flex items-center shrink-0 ms-3">
             <div className="space-y-1">
               {(model.accuracy_score > 0 || model.speed_score > 0) && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted w-24 text-end">
+                  <div className="flex items-center justify-end gap-2">
+                    <p className="text-xs text-muted text-end whitespace-nowrap">
                       {t("onboarding.modelCard.accuracy")}
                     </p>
-                    <div className="w-16 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
+                    <div className="w-14 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-logo-primary rounded-full"
                         style={{ width: `${model.accuracy_score * 100}%` }}
@@ -192,8 +240,8 @@ const ModelCard: React.FC<ModelCardProps> = ({
                   </div>
 
                   {model.engine_type === "Remote" && (
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted w-24 text-end">
+                    <div className="flex items-center justify-end gap-2">
+                      <p className="text-xs text-muted text-end whitespace-nowrap">
                         {t("onboarding.modelCard.speed")}
                         {speedIsMeasured && (
                           <span
@@ -204,7 +252,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                           </span>
                         )}
                       </p>
-                      <div className="w-16 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
+                      <div className="w-14 h-1.5 bg-mid-gray/20 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-logo-primary rounded-full"
                           style={{ width: `${speedScore * 100}%` }}

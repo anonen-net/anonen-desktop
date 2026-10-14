@@ -101,14 +101,31 @@ fn push_revision(raw: Option<&str>, rev: Revision) -> Vec<Revision> {
     list
 }
 
+pub fn new_recording_file_name() -> String {
+    let id = uuid::Uuid::new_v4().simple().to_string();
+    recording_file_name_at(chrono::Utc::now().timestamp_millis(), &id[..8])
+}
+
+fn recording_file_name_at(millis: i64, suffix: &str) -> String {
+    format!("anonen-{millis}-{suffix}.wav")
+}
+
 fn is_recording_file_name(name: &str) -> bool {
-    let Some(stamp) = name
+    let Some(stem) = name
         .strip_prefix("anonen-")
         .and_then(|rest| rest.strip_suffix(".wav"))
     else {
         return false;
     };
-    !stamp.is_empty() && stamp.bytes().all(|b| b.is_ascii_digit())
+    let (stamp, suffix) = match stem.split_once('-') {
+        Some((stamp, suffix)) => (stamp, Some(suffix)),
+        None => (stem, None),
+    };
+    let stamp_ok = !stamp.is_empty() && stamp.bytes().all(|b| b.is_ascii_digit());
+    let suffix_ok = suffix.map_or(true, |s| {
+        s.len() == 8 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+    });
+    stamp_ok && suffix_ok
 }
 
 fn orphan_recordings<'a>(
@@ -933,6 +950,21 @@ mod tests {
     }
 
     #[test]
+    fn new_names_are_ours_and_do_not_collide_within_the_same_millisecond() {
+        let a = new_recording_file_name();
+        let b = new_recording_file_name();
+        assert_ne!(a, b);
+        assert!(is_recording_file_name(&a), "{a}");
+        assert_eq!(
+            recording_file_name_at(1_760_000_000_123, "0a1b2c3d"),
+            "anonen-1760000000123-0a1b2c3d.wav"
+        );
+
+        let files = on_disk(&["anonen-1.wav", "anonen-1760000000123-0a1b2c3d.wav"]);
+        assert_eq!(orphan_recordings(&files, &known(&[])).len(), 2);
+    }
+
+    #[test]
     fn files_that_are_not_ours_are_left_alone() {
         let files = on_disk(&[
             "notes.txt",
@@ -942,6 +974,12 @@ mod tests {
             "anonen-1.wav.bak",
             "handy-1.wav",
             "ANONEN-1.WAV",
+            "anonen-1-0a1b2c3.wav",
+            "anonen-1-0a1b2c3d4.wav",
+            "anonen-1-0A1B2C3D.wav",
+            "anonen-1-0a1b2c3g.wav",
+            "anonen--0a1b2c3d.wav",
+            "anonen-1-0a1b2c3d-1.wav",
         ]);
         assert!(
             orphan_recordings(&files, &known(&[])).is_empty(),

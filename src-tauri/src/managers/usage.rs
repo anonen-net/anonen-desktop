@@ -79,6 +79,8 @@ impl UsageManager {
         base_url: &str,
     ) -> Result<AnonenCloudUsageSnapshot, String> {
         let auth = app.state::<AnonenCloudAuthManager>();
+
+        let asked_for = auth.status().email;
         let access = auth.get_access_token()?;
         let url = format!("{}/v1/usage", base_url.trim_end_matches('/'));
         let response = crate::remote_asr::identify(self.http.get(&url))
@@ -88,6 +90,12 @@ impl UsageManager {
         let status = response.status();
         let body = response.text().unwrap_or_default();
         info!("[anonen-cloud-usage] fetch status={}", status);
+
+        let now = auth.status();
+        if !keep_usage_reply(asked_for.as_deref(), now.signed_in, now.email.as_deref()) {
+            info!("[anonen-cloud-usage] account changed during the fetch; result discarded");
+            return Err("account_changed".to_string());
+        }
         if !status.is_success() {
             if status == reqwest::StatusCode::PAYMENT_REQUIRED {
                 clear_cached_entitlement(app);
@@ -153,6 +161,15 @@ struct CachedEntitlement {
 
 pub fn is_active_subscription_status(status: &str) -> bool {
     matches!(status, "trialing" | "active" | "past_due")
+}
+
+fn keep_usage_reply(asked_for: Option<&str>, signed_in_now: bool, now: Option<&str>) -> bool {
+    signed_in_now
+        && match (asked_for, now) {
+            (Some(a), Some(b)) => a == b,
+            (None, None) => true,
+            _ => false,
+        }
 }
 
 fn entitlement_store(
@@ -224,4 +241,42 @@ pub fn has_active_subscription(app: &AppHandle) -> bool {
     cached_entitlement_status(app)
         .map(|s| is_active_subscription_status(&s))
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keep_usage_reply;
+
+    #[test]
+    fn a_usage_reply_is_kept_only_for_the_account_that_asked() {
+        let (a, b) = (Some("a@example.com"), Some("b@example.com"));
+        assert!(keep_usage_reply(a, true, a));
+
+        assert!(!keep_usage_reply(a, true, b));
+
+        assert!(!keep_usage_reply(a, false, None));
+        assert!(!keep_usage_reply(None, false, None));
+
+        assert!(!keep_usage_reply(None, true, b));
+        assert!(!keep_usage_reply(a, true, None));
+    }
+
+    #[test]
+    fn the_account_check_runs_before_any_reply_touches_the_state() {
+        let src = include_str!("usage.rs");
+        let body = &src[src.find("pub fn fetch(").expect("fetch is in usage.rs")..];
+        let check = body
+            .find("keep_usage_reply(")
+            .expect("fetch checks the account");
+        let payment = body.find("PAYMENT_REQUIRED").expect("fetch handles 402");
+        assert!(
+            check < payment,
+            "the account check must come before the 402/401 branches"
+        );
+    }
+
+    #[test]
+    fn an_unknown_email_on_both_ends_does_not_lock_out_the_signed_in_user() {
+        assert!(keep_usage_reply(None, true, None));
+    }
 }

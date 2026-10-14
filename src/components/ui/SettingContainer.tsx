@@ -12,6 +12,8 @@ interface SettingContainerProps {
   tooltipPosition?: "top" | "bottom";
 
   align?: "start" | "center";
+
+  titleIcon?: React.ReactNode;
 }
 
 export const SettingContainer: React.FC<SettingContainerProps> = ({
@@ -24,6 +26,7 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
   disabled = false,
   tooltipPosition = "top",
   align = "start",
+  titleIcon,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -45,6 +48,15 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
     }
   }, [showTooltip]);
 
+  const heading = titleIcon ? (
+    <span className="inline-flex items-center gap-1.5">
+      {titleIcon}
+      {title}
+    </span>
+  ) : (
+    title
+  );
+
   const toggleTooltip = () => {
     setShowTooltip(!showTooltip);
   };
@@ -63,7 +75,7 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
             <h3
               className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}
             >
-              {title}
+              {heading}
             </h3>
             <div
               ref={tooltipRef}
@@ -116,7 +128,7 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
       <div className={containerClasses}>
         <div className={`mb-2 ${align === "center" ? "text-center" : ""}`}>
           <h3 className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}>
-            {title}
+            {heading}
           </h3>
           <p className={`text-sm ${disabled ? "opacity-50" : ""}`}>
             {description}
@@ -143,7 +155,7 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
             <h3
               className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}
             >
-              {title}
+              {heading}
             </h3>
             <div
               ref={tooltipRef}
@@ -193,7 +205,7 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
     <div className={horizontalContainerClasses}>
       <div className="max-w-2/3">
         <h3 className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}>
-          {title}
+          {heading}
         </h3>
         <p className={`text-sm ${disabled ? "opacity-50" : ""}`}>
           {description}

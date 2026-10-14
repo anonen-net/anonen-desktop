@@ -501,6 +501,9 @@ pub struct AppSettings {
 
     #[serde(default)]
     pub acknowledged_cloud_policies: Vec<String>,
+
+    #[serde(default)]
+    pub cloud_remove_fillers: bool,
 }
 
 fn default_model() -> String {
@@ -891,6 +894,7 @@ pub fn get_default_settings() -> AppSettings {
         remote_asr_opus_compression: default_remote_asr_opus_compression(),
 
         acknowledged_cloud_policies: Vec::new(),
+        cloud_remove_fillers: false,
     }
 }
 

@@ -116,6 +116,10 @@ fn restore_clipboard(
     previous_image: Option<tauri::image::Image<'_>>,
 ) {
     if let Some(previous) = previous_text {
+        #[cfg(target_os = "windows")]
+        if crate::paste_tx::write_text_excluded(previous).is_ok() {
+            return;
+        }
         let _ = write_text_to_clipboard(app_handle, previous);
         return;
     }

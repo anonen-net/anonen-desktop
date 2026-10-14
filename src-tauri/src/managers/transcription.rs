@@ -1092,6 +1092,13 @@ impl TranscriptionManager {
 
         let model_for_request = Some(cloud_model_id.to_string());
 
+        let remove_fillers = crate::remote_asr::wants_filler_removal(
+            settings.cloud_remove_fillers,
+            self.model_manager
+                .get_remote_config(&settings.selected_model)
+                .is_some_and(|c| c.supports_filler_removal),
+        );
+
         info!(
             "[anonen-cloud] transcribe: {} bytes {}, model={:?}, lang={:?}",
             payload_bytes, payload_fmt, model_for_request, language
@@ -1226,6 +1233,7 @@ impl TranscriptionManager {
                                 &req_id,
                                 model.as_deref(),
                                 lang.as_deref(),
+                                remove_fillers,
                                 request_timeout,
                                 enclave,
                             )
@@ -1241,6 +1249,7 @@ impl TranscriptionManager {
                                 &req_id,
                                 model.as_deref(),
                                 lang.as_deref(),
+                                remove_fillers,
                                 request_timeout,
                             )
                         }

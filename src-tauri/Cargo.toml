@@ -1,6 +1,6 @@
 [package]
 name = "anonen"
-version = "1.0.124"
+version = "1.0.146"
 description = "Anonen - speech-to-text"
 authors = []
 edition = "2021"
@@ -71,7 +71,7 @@ futures-util = "0.3"
 strsim = "0.11.0"
 natural = "0.5.0"
 ogg = "0.9"
-tar = "0.4.44"
+tar = "0.4.45"
 flate2 = "1.0"
 sha2 = { version = "0.10", features = ["oid"] }
 hpke = "0.14"

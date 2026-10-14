@@ -101,19 +101,23 @@ export function isActiveSubscriptionStatus(
   return status != null && VALID_SUBSCRIPTION_STATUSES.has(status);
 }
 
-async function switchToRecommendedCloudModel(preferredId: string | null) {
+async function recommendedCloudModelId(
+  preferredId: string | null,
+): Promise<string | null> {
+  const { useModelStore } = await import("./modelStore");
+  const models = useModelStore.getState().models;
+  if (preferredId && models.some((m) => m.id === preferredId)) {
+    return preferredId;
+  }
+  return (
+    models.find((m) => m.id.startsWith(ANONEN_CLOUD_PREFIX) && m.is_recommended)
+      ?.id ?? null
+  );
+}
+
+async function switchToRecommendedCloudModel(target: string) {
   const { useModelStore } = await import("./modelStore");
   const store = useModelStore.getState();
-  const target =
-    (preferredId && store.models.some((m) => m.id === preferredId)
-      ? preferredId
-      : store.models.find(
-          (m) => m.id.startsWith(ANONEN_CLOUD_PREFIX) && m.is_recommended,
-        )?.id) ?? null;
-  if (!target) {
-    toast.error(i18n.t("anonenCloud.toast.noRecommendedModel"));
-    return;
-  }
   const name = store.getModelInfo(target)?.name ?? target;
 
   const ok = await store.selectModel(target);
@@ -125,21 +129,21 @@ async function switchToRecommendedCloudModel(preferredId: string | null) {
 }
 
 export function notifyCloudModelRetired(recommendedModelId: string | null) {
-  toast.error(i18n.t("anonenCloud.toast.modelRetired"), {
-    duration: 10000,
-    action: {
-      label: i18n.t("anonenCloud.toast.modelRetiredSwitch"),
-      onClick: () => {
-        switchToRecommendedCloudModel(recommendedModelId).catch((e) => {
-          console.warn("Failed to switch to recommended model:", e);
-          toast.error(
-            i18n.t("anonenCloud.toast.switchFailed", {
-              target: recommendedModelId ?? "?",
-            }),
-          );
-        });
-      },
-    },
+  void recommendedCloudModelId(recommendedModelId).then((target) => {
+    toast.error(i18n.t("anonenCloud.toast.modelRetired"), {
+      duration: 10000,
+      ...(target && {
+        action: {
+          label: i18n.t("anonenCloud.toast.modelRetiredSwitch"),
+          onClick: () => {
+            switchToRecommendedCloudModel(target).catch((e) => {
+              console.warn("Failed to switch to recommended model:", e);
+              toast.error(i18n.t("anonenCloud.toast.switchFailed", { target }));
+            });
+          },
+        },
+      }),
+    });
   });
 }
 
@@ -156,12 +160,7 @@ export async function proposeDefaultCloudModel() {
     if (!first) {
       return;
     }
-    const cloud = useAnonenCloudStore.getState();
-    if (cloud.policyNeedingDisclosure(first.id)) {
-      cloud.showPolicy(first.id, true);
-    } else {
-      await store.selectModel(first.id);
-    }
+    useAnonenCloudStore.getState().showPolicy(first.id, true);
   } catch {}
 }
 

@@ -549,7 +549,6 @@ where a permissive option is offered, that is the one this application uses.
 - system-configuration-sys 0.6.0 — Copyright (c) 2024 Mullvad VPN AB
 - tao-macros 0.1.4 — Copyright (c) 2022 - Present Tauri Apps Contributors
 - tap 1.0.1 — Copyright (c) 2017 Elliot Linder <darfink@gmail.com>
-- tar 0.4.44 — Copyright (c) 2014 Alex Crichton
 - tauri 2.11.6 — Copyright (c) 2017 - Present Tauri Apps Contributors
 - tauri-build 2.6.3 — Copyright (c) 2017 - Present Tauri Apps Contributors
 - tauri-codegen 2.6.3 — Copyright (c) 2017 - Present Tauri Apps Contributors
@@ -1047,7 +1046,6 @@ where a permissive option is offered, that is the one this application uses.
 - system-configuration-sys 0.6.0
 - system-deps 6.2.2
 - system-deps 7.0.7
-- tar 0.4.44
 - tempfile 3.25.0
 - tendril 0.4.3
 - tendril 0.5.1
@@ -1373,7 +1371,7 @@ DEALINGS IN THE SOFTWARE.
 - system-deps 6.2.2
 - system-deps 7.0.7
 - tao-macros 0.1.4
-- tar 0.4.44
+- tar 0.4.45
 - tempfile 3.25.0
 - tendril 0.4.3
 - tendril 0.5.1
@@ -8171,6 +8169,38 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+### Applies to
+
+- tar 0.4.45
+
+```
+Copyright (c) The tar-rs Project Contributors
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 ```
 
 ### Applies to

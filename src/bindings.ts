@@ -115,6 +115,22 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
+
+  async changeCloudRemoveFillersSetting(
+    enabled: boolean,
+  ): Promise<Result<null, string>> {
+    try {
+      return {
+        status: "ok",
+        data: await TAURI_INVOKE("change_cloud_remove_fillers_setting", {
+          enabled,
+        }),
+      };
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      else return { status: "error", error: e as any };
+    }
+  },
   async changeSelectedLanguageSetting(
     language: string,
   ): Promise<Result<null, string>> {
@@ -634,6 +650,7 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
+
   async changeShowTrayIconSetting(
     enabled: boolean,
   ): Promise<Result<null, string>> {
@@ -746,6 +763,18 @@ export const commands = {
       return {
         status: "ok",
         data: await TAURI_INVOKE("show_main_window_command"),
+      };
+    } catch (e) {
+      if (e instanceof Error) throw e;
+      else return { status: "error", error: e as any };
+    }
+  },
+
+  async prepareUpdateRelaunch(): Promise<Result<null, string>> {
+    try {
+      return {
+        status: "ok",
+        data: await TAURI_INVOKE("prepare_update_relaunch"),
       };
     } catch (e) {
       if (e instanceof Error) throw e;
@@ -1528,6 +1557,8 @@ export type AppSettings = {
   remote_asr_opus_compression?: boolean;
 
   acknowledged_cloud_policies?: string[];
+
+  cloud_remove_fillers?: boolean;
 };
 
 export type AsrGatewayModel = {
@@ -1551,6 +1582,10 @@ export type AsrGatewayModel = {
   retention_kind?: string;
 
   retention_days?: number | null;
+
+  release_stage?: string;
+
+  supports_filler_removal?: boolean;
 };
 
 export type AsrGatewayUsage = {

@@ -73,13 +73,21 @@ fn ensure_retranscribe_allowed(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+enum RetryAudio {
+    AsSettings,
+
+    Forced { opus: bool },
+
+    OpusRoundTrip,
+}
+
 async fn retry_history_entry_inner(
     app: &AppHandle,
     history_manager: &Arc<HistoryManager>,
     transcription_manager: &Arc<TranscriptionManager>,
     id: i64,
     force_post_process: bool,
-    opus_override: Option<bool>,
+    audio: RetryAudio,
 ) -> Result<(), String> {
     ensure_retranscribe_allowed(app)?;
 
@@ -97,12 +105,27 @@ async fn retry_history_entry_inner(
         return Err("Recording has no audio samples".to_string());
     }
 
+    let (samples, opus_override) = match audio {
+        RetryAudio::AsSettings => (samples, None),
+        RetryAudio::Forced { opus } => (samples, Some(opus)),
+        RetryAudio::OpusRoundTrip => {
+            let round_tripped = tauri::async_runtime::spawn_blocking(move || {
+                crate::audio_toolkit::opus_round_trip(&samples)
+            })
+            .await
+            .map_err(|e| format!("Opus round trip panicked: {}", e))?
+            .map_err(|e| format!("Failed to round-trip the audio through Opus: {}", e))?;
+            (round_tripped, Some(false))
+        }
+    };
+
     transcription_manager.initiate_model_load();
 
     transcription_manager.warm_connection();
 
     let tm = Arc::clone(transcription_manager);
 
+    let audio_samples = samples.len();
     let transcription_time = Instant::now();
     let transcription = tauri::async_runtime::spawn_blocking(move || {
         tm.transcribe_with_options(
@@ -124,7 +147,7 @@ async fn retry_history_entry_inner(
         return Err("Recording contains no speech".to_string());
     }
 
-    record_transcription_stats(app, transcribe_ms);
+    record_transcription_stats(app, transcribe_ms, audio_samples);
 
     let post_process = force_post_process || entry.post_process_requested;
     let processed = process_transcription_output(app, &transcription, post_process).await;
@@ -154,7 +177,7 @@ pub async fn retry_history_entry_transcription(
         transcription_manager.inner(),
         id,
         false,
-        None,
+        RetryAudio::AsSettings,
     )
     .await
 }
@@ -173,7 +196,7 @@ pub async fn retry_history_entry_transcription_with_post_process(
         transcription_manager.inner(),
         id,
         true,
-        None,
+        RetryAudio::AsSettings,
     )
     .await
 }
@@ -193,7 +216,26 @@ pub async fn retry_history_entry_with_format(
         transcription_manager.inner(),
         id,
         false,
-        Some(use_opus),
+        RetryAudio::Forced { opus: use_opus },
+    )
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn retry_history_entry_opus_round_trip(
+    app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+    transcription_manager: State<'_, Arc<TranscriptionManager>>,
+    id: i64,
+) -> Result<(), String> {
+    retry_history_entry_inner(
+        &app,
+        history_manager.inner(),
+        transcription_manager.inner(),
+        id,
+        false,
+        RetryAudio::OpusRoundTrip,
     )
     .await
 }

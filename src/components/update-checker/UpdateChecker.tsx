@@ -162,6 +162,7 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
         return;
       }
 
+      await commands.prepareUpdateRelaunch();
       await update.downloadAndInstall((event) => {
         switch (event.event) {
           case "Started":

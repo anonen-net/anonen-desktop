@@ -3,11 +3,17 @@ pub fn fingerprint(
     training_use: &str,
     retention_kind: &str,
     retention_days: Option<i64>,
+    release_stage: &str,
 ) -> String {
     let days = retention_days
         .map(|d| d.to_string())
         .unwrap_or_else(|| "-".to_string());
-    format!("{model_id}@{training_use}/{retention_kind}/{days}")
+    let stage = if release_stage == "preview" {
+        "/preview"
+    } else {
+        ""
+    };
+    format!("{model_id}@{training_use}/{retention_kind}/{days}{stage}")
 }
 
 pub fn needs_disclosure(acknowledged: &[String], fingerprint: &str) -> bool {
@@ -40,10 +46,10 @@ mod tests {
 
     #[test]
     fn a_changed_policy_is_disclosed_again() {
-        let seen = with_acknowledged(&[], &fingerprint("a/one", "no", "days", Some(30)));
+        let seen = with_acknowledged(&[], &fingerprint("a/one", "no", "days", Some(30), "ga"));
         assert!(needs_disclosure(
             &seen,
-            &fingerprint("a/one", "no", "unspecified", None)
+            &fingerprint("a/one", "no", "unspecified", None, "ga")
         ));
     }
 
@@ -65,14 +71,39 @@ mod tests {
     }
 
     #[test]
+    fn only_a_preview_changes_the_mark() {
+        assert_eq!(
+            fingerprint(
+                "azure/MAI-Transcribe-2",
+                "no",
+                "unspecified",
+                None,
+                "preview"
+            ),
+            "azure/MAI-Transcribe-2@no/unspecified/-/preview"
+        );
+
+        assert_eq!(
+            fingerprint("x/y", "unknown", "unknown", None, "ga"),
+            "x/y@unknown/unknown/-"
+        );
+
+        let seen = with_acknowledged(&[], &fingerprint("a/one", "no", "none", None, "preview"));
+        assert!(needs_disclosure(
+            &seen,
+            &fingerprint("a/one", "no", "none", None, "ga")
+        ));
+    }
+
+    #[test]
     fn days_are_part_of_the_mark() {
         assert_ne!(
-            fingerprint("a/one", "no", "days", Some(30)),
-            fingerprint("a/one", "no", "days", Some(7))
+            fingerprint("a/one", "no", "days", Some(30), "ga"),
+            fingerprint("a/one", "no", "days", Some(7), "ga")
         );
         assert_ne!(
-            fingerprint("a/one", "no", "days", Some(30)),
-            fingerprint("b/two", "no", "days", Some(30))
+            fingerprint("a/one", "no", "days", Some(30), "ga"),
+            fingerprint("b/two", "no", "days", Some(30), "ga")
         );
     }
 }

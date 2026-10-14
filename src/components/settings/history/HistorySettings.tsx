@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
+  ArrowRightLeft,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -30,6 +31,14 @@ import { useModelStore } from "@/stores/modelStore";
 import { retryFailureToast } from "@/lib/failureNotice";
 import { AudioPlayer, AudioPlayerGroup } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
+
+type RetryFormat = "opus" | "wav" | "opusRoundTrip";
+
+const RETRANSCRIBED_TOAST = {
+  opus: "settings.history.retranscribedOpus",
+  wav: "settings.history.retranscribedWav",
+  opusRoundTrip: "settings.history.retranscribedOpusRoundTrip",
+} as const;
 
 const IconButton: React.FC<{
   onClick: () => void;
@@ -329,11 +338,7 @@ export const HistorySettings: React.FC = () => {
                 key={entry.id}
                 entry={entry}
                 onToggleSaved={() => toggleSaved(entry.id)}
-                onCopyText={() =>
-                  copyToClipboard(
-                    entry.post_processed_text ?? entry.transcription_text,
-                  )
-                }
+                onCopyText={copyToClipboard}
                 getAudioUrl={getAudioUrl}
                 deleteAudio={deleteAudioEntry}
                 retryTranscription={retryHistoryEntry}
@@ -398,7 +403,8 @@ export const HistorySettings: React.FC = () => {
 interface HistoryEntryProps {
   entry: HistoryEntry;
   onToggleSaved: () => void;
-  onCopyText: () => void;
+
+  onCopyText: (text: string) => void;
   getAudioUrl: (fileName: string) => Promise<string | null>;
   deleteAudio: (id: number) => Promise<void>;
   retryTranscription: (id: number) => Promise<void>;
@@ -464,7 +470,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
       return;
     }
 
-    onCopyText();
+    onCopyText(shown.text);
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
   };

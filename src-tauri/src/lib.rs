@@ -45,7 +45,7 @@ use std::sync::Arc;
 use tauri::image::Image;
 pub use transcription_coordinator::TranscriptionCoordinator;
 
-use tauri::tray::TrayIconBuilder;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Listener, Manager};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_log::{Builder as LogBuilder, RotationStrategy, Target, TargetKind};
@@ -222,7 +222,19 @@ fn initialize_core_logic(app_handle: &AppHandle) {
             .unwrap(),
         )
         .tooltip(tray::tray_tooltip())
-        .show_menu_on_left_click(true)
+        .show_menu_on_left_click(!cfg!(target_os = "windows"))
+        .on_tray_icon_event(|tray, event| {
+            if cfg!(target_os = "windows") {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event
+                {
+                    show_main_window(tray.app_handle());
+                }
+            }
+        })
         .icon_as_template(true)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "settings" => {
@@ -372,6 +384,13 @@ fn show_main_window_command(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+fn prepare_update_relaunch(app: AppHandle) -> Result<(), String> {
+    let dir = portable::app_data_dir(&app).map_err(|e| e.to_string())?;
+    utils::write_update_marker(&dir, std::time::SystemTime::now()).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(cli_args: CliArgs) {
     portable::init();
@@ -398,6 +417,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_start_hidden_setting,
             shortcut::change_autostart_setting,
             shortcut::change_translate_to_english_setting,
+            shortcut::change_cloud_remove_fillers_setting,
             shortcut::change_selected_language_setting,
             shortcut::change_overlay_position_setting,
             shortcut::change_debug_mode_setting,
@@ -448,6 +468,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::handy_keys::stop_handy_keys_recording,
             trigger_update_check,
             show_main_window_command,
+            prepare_update_relaunch,
             commands::cancel_operation,
             commands::is_portable,
             commands::get_app_dir_path,
@@ -676,7 +697,11 @@ pub fn run(cli_args: CliArgs) {
             let should_force_show = should_force_show_permissions_window(&app_handle);
 
             let tray_available = settings.show_tray_icon && !cli_args.no_tray;
-            if should_force_show || !should_hide || !tray_available {
+
+            let after_update = portable::app_data_dir(&app_handle)
+                .map(|dir| utils::take_update_marker(&dir, std::time::SystemTime::now()))
+                .unwrap_or(false);
+            if should_force_show || !should_hide || !tray_available || after_update {
                 show_main_window(&app_handle);
             }
 

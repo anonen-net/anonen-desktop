@@ -6,13 +6,13 @@ on:
       - "v*"
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
-  windows-x64:
+  build:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - name: Enable long paths
         shell: pwsh
@@ -21,6 +21,8 @@ jobs:
           git config --system core.longpaths true
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
 
@@ -43,16 +45,11 @@ jobs:
 
       - name: Verify the updater is wired up
         shell: pwsh
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
           $placeholder = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMzQkZEOTMyQ0M4NENCMkQKUldRdHk0VE1NdG0vd3lqRmRnbDlMOVdad1VQNXlnazUxd3pFQ1pKSDY3OUp6MXVRT0tLeUppMEYK"
           $updater = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).plugins.updater
           if ($updater.pubkey -eq $placeholder) {
             throw "updater pubkey is still the placeholder - generate a signing key and replace it"
-          }
-          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
-            throw "TAURI_SIGNING_PRIVATE_KEY is required to sign the update"
           }
           if ($updater.endpoints[0] -notlike "https://*") { throw "updater endpoint must be https" }
 
@@ -74,7 +71,7 @@ jobs:
             "ANONEN_SEALED_REQUIRED=true"
           ) | Set-Content src-tauri/.env
           $config = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
-          $config.bundle.createUpdaterArtifacts = $true
+          $config.bundle.createUpdaterArtifacts = $false
           $config | ConvertTo-Json -Depth 100 | Set-Content src-tauri/tauri.conf.json
           "CARGO_TARGET_DIR=C:\t" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -106,10 +103,14 @@ jobs:
       - name: Run the tests the claims rest on
         shell: pwsh
         run: |
-          cargo test --manifest-path src-tauri/Cargo.toml --no-run
+          cargo test --locked --manifest-path src-tauri/Cargo.toml --no-run
           $deps = "C:\t\debug\deps"
           Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.AI.DirectML/1.15.4" -OutFile dml.zip
           Expand-Archive dml.zip -DestinationPath dml
+          $dmlSig = Get-AuthenticodeSignature dml\bin\x64-win\DirectML.dll
+          if ($dmlSig.Status -ne "Valid" -or $dmlSig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
+            throw "DirectML.dll is not signed by Microsoft: $($dmlSig.Status) $($dmlSig.SignerCertificate.Subject)"
+          }
           Copy-Item dml\bin\x64-win\DirectML.dll $deps\
           if (Test-Path "$env:VULKAN_SDK\Bin\vulkan-1.dll") { Copy-Item "$env:VULKAN_SDK\Bin\vulkan-1.dll" $deps\ }
           $manifest = @'
@@ -141,13 +142,17 @@ jobs:
               if ($missing.Count -gt 0) { "$n -> $path ($ver) MISSING: $($missing -join ', ')" }
             }
           }
-          cargo test --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest
+          cargo test --locked --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Build frontend
         run: bun run build
+
+      - name: Check Cargo.lock is used as committed
+        shell: pwsh
+        run: cargo metadata --locked --format-version 1 --manifest-path src-tauri/Cargo.toml > $null
 
       - name: Build installers
         shell: pwsh
@@ -157,8 +162,6 @@ jobs:
           GGML_AVX2: "OFF"
           GGML_FMA: "OFF"
           GGML_F16C: "OFF"
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: bun run tauri build --bundles nsis,msi
 
       - name: Collect release files
@@ -171,10 +174,78 @@ jobs:
           if (-not $nsis) { throw "no NSIS installer to publish" }
           Copy-Item $nsis.FullName release/AnonenSetup.exe
 
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          subject-path: release/*
+          name: installers
+          path: release/
+          if-no-files-found: error
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: installers
+          path: release/
+
+      - name: Install the pinned Tauri CLI
+        shell: bash
+        env:
+          SIGNER_VERSION: "2.11.5"
+          SIGNER_CLI_SHA512: "sha512-YbeJ6tctNoo40purO4u3Eeo3RVqmsjJr0NoKQRu+4pvO4gMLzkjta7x0k96SxSLmx+rQ+8um1ThOlw+HLpgFug=="
+          SIGNER_LINUX_SHA512: "sha512-Xz1s87gFjZJZMQKAhLa77YeiCJM6yVog3f9OxDgVd/KxDIoB1dA5V2xOnMM+SRkOGk9juwIBqesVAjV0kUB0DA=="
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/signer" && cd "$RUNNER_TEMP/signer"
+          check() {
+            local name="$1" want="$2" tgz got
+            tgz=$(npm pack "$name@$SIGNER_VERSION" --silent)
+            got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+            if [ "$got" != "$want" ]; then echo "::error::$name@$SIGNER_VERSION の中身が固定した値と違う"; exit 1; fi
+          }
+          check "@tauri-apps/cli" "$SIGNER_CLI_SHA512"
+          check "@tauri-apps/cli-linux-x64-gnu" "$SIGNER_LINUX_SHA512"
+          npm init -y > /dev/null
+          npm install --ignore-scripts --no-audit --no-fund ./*.tgz
+          ./node_modules/.bin/tauri --version
+
+      - name: Sign the update
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is required to sign the update"; exit 1
+          fi
+          version=$(python3 -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["version"])')
+          product=$(python3 -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["productName"])')
+          nsis="release/${product}_${version}_x64-setup.exe"
+          test -f "$nsis" || { echo "::error::missing $nsis"; exit 1; }
+          cmp -s "$nsis" release/AnonenSetup.exe || { echo "::error::AnonenSetup.exe differs from $nsis"; exit 1; }
+          shopt -s nullglob
+          msis=(release/"${product}_${version}_x64_"*.msi)
+          test "${#msis[@]}" -le 1 || { echo "::error::more than one MSI"; exit 1; }
+          for f in release/*; do
+            case "$f" in
+              "$nsis" | release/AnonenSetup.exe) ;;
+              *) if [ "${#msis[@]}" -eq 1 ] && [ "$f" = "${msis[0]}" ]; then continue; fi
+                 echo "::error::unexpected file in the build artifact: $f"; exit 1 ;;
+            esac
+          done
+          tauri="$RUNNER_TEMP/signer/node_modules/.bin/tauri"
+          for f in "$nsis" "${msis[@]}"; do
+            "$tauri" signer sign "$f" > /dev/null
+            test -s "$f.sig" || { echo "::error::no signature for $f"; exit 1; }
+          done
 
       - name: Build the update manifest
         shell: pwsh
@@ -191,7 +262,7 @@ jobs:
             }
           }
 
-          $nsis = Get-ChildItem C:\t\release\bundle -Recurse -Filter *-setup.exe | Select-Object -First 1
+          $nsis = Get-ChildItem release -Filter *-setup.exe | Select-Object -First 1
           if (-not $nsis) { throw "no NSIS installer to publish" }
           $nsisEntry = New-Entry $nsis
 
@@ -200,16 +271,49 @@ jobs:
             "windows-x86_64-nsis" = $nsisEntry
           }
 
-          $msi = Get-ChildItem C:\t\release\bundle -Recurse -Filter *.msi | Select-Object -First 1
+          $msi = Get-ChildItem release -Filter *.msi | Select-Object -First 1
           if ($msi) { $platforms["windows-x86_64-msi"] = New-Entry $msi }
 
           @{
             version   = $version
             pub_date  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             platforms = $platforms
-          } | ConvertTo-Json -Depth 10 | Set-Content release/latest.json -Encoding utf8
+          } | ConvertTo-Json -Depth 10 | Set-Content latest.json -Encoding utf8
 
-          Get-Content release/latest.json
+          Get-Content latest.json
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: update-manifest
+          path: latest.json
+          if-no-files-found: error
+
+  publish:
+    needs: [build, sign]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: installers
+          path: release/
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: update-manifest
+          path: release/
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: release/*
 
       - name: Take the release notes from the release commit
         shell: bash
@@ -222,9 +326,9 @@ jobs:
           cat release-notes.md
 
       - name: Publish release
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $files = Get-ChildItem release | ForEach-Object { $_.FullName }
-          gh release create $env:GITHUB_REF_NAME $files --title "Release $env:GITHUB_REF_NAME" --notes-file release-notes.md
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" release/* --title "Release $GITHUB_REF_NAME" --notes-file release-notes.md
