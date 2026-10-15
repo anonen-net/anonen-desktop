@@ -963,7 +963,7 @@
   },
   "modelDataPolicy": {
     "intro": "Choosing this model sends your recordings to the provider below.",
-    "introCurrent": "This model is selected: your recordings are being sent to the provider below. You have not yet agreed to how it currently handles audio. Closing this without \"Use this model\" clears the selection.",
+    "introCurrent": "This model is selected: your recordings will be sent to the provider below. You have not yet agreed to how it currently handles audio. Closing this without \"Use this model\" clears the selection.",
     "destination": "Audio goes to",
     "trainingLabel": "Used for training",
     "retentionLabel": "Kept by the provider",

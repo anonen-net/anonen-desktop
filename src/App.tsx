@@ -186,6 +186,7 @@ function App() {
         toast.error(t("errors.noInputDeviceTitle"), {
           description: t("errors.noInputDevice"),
         });
+      } else if (error_type === "model_disclosure_required") {
       } else if (error_type === "network_unavailable") {
         toast.error(t("errors.networkUnavailableTitle"), {
           description: t("errors.networkUnavailable"),

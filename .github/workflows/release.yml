@@ -142,7 +142,7 @@ jobs:
               if ($missing.Count -gt 0) { "$n -> $path ($ver) MISSING: $($missing -join ', ')" }
             }
           }
-          cargo test --locked --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest
+          cargo test --locked --manifest-path src-tauri/Cargo.toml -- sealed:: ipc_origin_tests:: remote_asr:: cloud_failure:: model_data_policy:: catalog_freshness:: managers::tests:: managers::anonen_cloud_auth:: actions::tests::failure_events managers::history::tests::a_failed_trim managers::history::tests::the_trim managers::history::tests::the_latest managers::transcription::tests::the_send_path
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

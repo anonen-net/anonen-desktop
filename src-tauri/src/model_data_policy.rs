@@ -20,6 +20,10 @@ pub fn needs_disclosure(acknowledged: &[String], fingerprint: &str) -> bool {
     !acknowledged.iter().any(|a| a == fingerprint)
 }
 
+pub fn blocks_sending(acknowledged: &[String], current_mark: Option<&str>) -> bool {
+    current_mark.is_some_and(|mark| needs_disclosure(acknowledged, mark))
+}
+
 pub const MAX_ACKNOWLEDGED: usize = 60;
 
 pub fn with_acknowledged(acknowledged: &[String], fingerprint: &str) -> Vec<String> {
@@ -35,7 +39,25 @@ pub fn with_acknowledged(acknowledged: &[String], fingerprint: &str) -> Vec<Stri
 
 #[cfg(test)]
 mod tests {
-    use super::{fingerprint, needs_disclosure, with_acknowledged, MAX_ACKNOWLEDGED};
+    use super::{
+        blocks_sending, fingerprint, needs_disclosure, with_acknowledged, MAX_ACKNOWLEDGED,
+    };
+
+    #[test]
+    fn sending_waits_for_a_changed_policy_to_be_shown() {
+        let shown = fingerprint("a/one", "no", "days", Some(30), "ga");
+        let seen = with_acknowledged(&[], &shown);
+
+        assert!(!blocks_sending(&seen, Some(&shown)));
+
+        let changed = fingerprint("a/one", "no", "unspecified", None, "ga");
+        assert!(blocks_sending(&seen, Some(&changed)));
+        let preview = fingerprint("a/one", "no", "days", Some(30), "preview");
+        assert!(blocks_sending(&seen, Some(&preview)));
+
+        assert!(!blocks_sending(&seen, None));
+        assert!(!blocks_sending(&[], None));
+    }
 
     #[test]
     fn unseen_policy_is_disclosed() {

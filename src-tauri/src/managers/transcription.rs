@@ -130,6 +130,8 @@ pub struct TranscriptionManager {
     last_model: Arc<Mutex<Option<String>>>,
 
     enclave_keys: Arc<crate::sealed::keys::EnclaveKeyStore>,
+
+    catalog_refresh: Arc<crate::catalog_freshness::RefreshGate>,
 }
 
 impl TranscriptionManager {
@@ -151,6 +153,7 @@ impl TranscriptionManager {
                 crate::sealed::attestation::DEFAULT_AUDIENCE,
                 UploadPolicy::from_build().accepted_image_digests,
             )),
+            catalog_refresh: Arc::new(crate::catalog_freshness::RefreshGate::default()),
         };
 
         {
@@ -1194,6 +1197,15 @@ impl TranscriptionManager {
                 }
             }
 
+            if crate::actions::request_disclosure_if_changed(
+                &self.app_handle,
+                &settings.selected_model,
+            ) {
+                return Err(anyhow::Error::new(
+                    crate::cloud_failure::CloudDisclosureRequiredError,
+                ));
+            }
+
             let client_cell = self.http_client.clone();
             let base = base_url.to_string();
             let req_id = request_id.clone();
@@ -1400,7 +1412,8 @@ impl TranscriptionManager {
     fn note_models_version(&self, version: &str) {
         let changed = {
             let mut last = self.last_models_version.lock().unwrap();
-            let changed = last.as_deref().map_or(false, |prev| prev != version);
+
+            let changed = last.as_deref().map_or(true, |prev| prev != version);
             *last = Some(version.to_string());
             changed
         };
@@ -1409,6 +1422,8 @@ impl TranscriptionManager {
                 "[anonen-cloud] models_version changed to {}; refreshing catalog",
                 version
             );
+
+            self.model_manager.mark_cloud_catalog_outdated();
             self.refresh_cloud_catalog_async();
         }
     }
@@ -1416,31 +1431,32 @@ impl TranscriptionManager {
     fn refresh_cloud_catalog_async(&self) {
         let app_handle = self.app_handle.clone();
         let model_manager = self.model_manager.clone();
-        thread::spawn(move || {
+        self.catalog_refresh.start_if_idle(move || {
             let base_url = model_manager.anonen_cloud_base_url();
-            let client = match reqwest::blocking::Client::builder()
+            let started = crate::catalog_freshness::Stamp::now();
+            let fetched = reqwest::blocking::Client::builder()
                 .timeout(Duration::from_secs(10))
                 .build()
-            {
-                Ok(c) => c,
-                Err(e) => {
-                    warn!("[anonen-cloud] catalog refresh: client build failed: {}", e);
-                    return;
-                }
-            };
-            let models = match crate::remote_asr::fetch_gateway_models(&client, &base_url) {
+                .map_err(|e| format!("client build failed: {}", e))
+                .and_then(|client| crate::remote_asr::fetch_gateway_models(&client, &base_url));
+            let models = match fetched {
                 Ok(m) => m,
                 Err(e) => {
                     warn!("[anonen-cloud] catalog refresh failed: {}", e);
+                    model_manager.mark_cloud_catalog_outdated();
                     return;
                 }
             };
-            model_manager.register_cloud_models(&models);
+            let changed = model_manager.register_cloud_models(&models, started);
 
             let selected = get_settings(&app_handle).selected_model;
             let selection_missing = selected
                 .starts_with(crate::managers::model::ANONEN_CLOUD_MODEL_PREFIX)
                 && model_manager.get_remote_config(&selected).is_none();
+
+            if !changed && !selection_missing {
+                return;
+            }
             let recommended_model_id = models.iter().find(|m| m.is_recommended).map(|m| {
                 format!(
                     "{}{}",
@@ -1464,6 +1480,16 @@ impl TranscriptionManager {
         });
     }
 
+    pub fn refresh_catalog_if_stale(&self) {
+        let selected = get_settings(&self.app_handle).selected_model;
+        if !selected.starts_with(crate::managers::model::ANONEN_CLOUD_MODEL_PREFIX) {
+            return;
+        }
+        if self.model_manager.cloud_catalog_is_stale() {
+            self.refresh_cloud_catalog_async();
+        }
+    }
+
     fn transcribe_remote(
         &self,
         audio: &[f32],
@@ -1471,6 +1497,19 @@ impl TranscriptionManager {
         opus_override: Option<bool>,
         cancellation: Cancellation,
     ) -> Result<String> {
+        if settings
+            .selected_model
+            .starts_with(crate::managers::model::ANONEN_CLOUD_MODEL_PREFIX)
+            && !crate::catalog_freshness::refresh_before_send(
+                &self.catalog_refresh,
+                || self.model_manager.cloud_catalog_is_stale(),
+                || self.refresh_catalog_if_stale(),
+                crate::catalog_freshness::WAIT_BEFORE_SEND,
+            )
+        {
+            warn!("[anonen-cloud] could not refresh the catalog in time; checking consent against the catalog in hand");
+        }
+
         let mut cfg = self
             .model_manager
             .get_remote_config(&settings.selected_model);
@@ -1482,6 +1521,7 @@ impl TranscriptionManager {
         {
             info!("[anonen-cloud] model card not registered yet, fetching /v1/models");
             let base_url = self.model_manager.anonen_cloud_base_url();
+            let started = crate::catalog_freshness::Stamp::now();
 
             let fetched =
                 std::thread::spawn(move || -> Option<Vec<crate::remote_asr::AsrGatewayModel>> {
@@ -1496,10 +1536,12 @@ impl TranscriptionManager {
                 .flatten();
             let fetch_gave_models = fetched.as_ref().map_or(false, |m| !m.is_empty());
             if let Some(models) = fetched {
-                self.model_manager.register_cloud_models(&models);
+                self.model_manager.register_cloud_models(&models, started);
                 cfg = self
                     .model_manager
                     .get_remote_config(&settings.selected_model);
+            } else {
+                self.model_manager.mark_cloud_catalog_outdated();
             }
 
             if cfg.is_none() {
@@ -1522,6 +1564,13 @@ impl TranscriptionManager {
                 settings.selected_model
             ));
         };
+
+        if crate::actions::request_disclosure_if_changed(&self.app_handle, &settings.selected_model)
+        {
+            return Err(anyhow::Error::new(
+                crate::cloud_failure::CloudDisclosureRequiredError,
+            ));
+        }
         self.transcribe_via_anonen_cloud(
             audio,
             settings,
@@ -1823,5 +1872,79 @@ mod tests {
         });
 
         assert_eq!(result, raw);
+    }
+
+    #[test]
+    fn the_send_path_refreshes_the_catalog_and_checks_consent_before_sending() {
+        let src = include_str!("transcription.rs").replace("\r\n", "\n");
+        let start = src
+            .find("fn transcribe_remote(")
+            .expect("transcribe_remote");
+        let end = start
+            + src[start..]
+                .find("\n    }\n")
+                .expect("the end of transcribe_remote");
+        let body = &src[start..end];
+        let refresh = body
+            .find(concat!(
+                "crate::catalog_freshness::refresh",
+                "_before_send("
+            ))
+            .expect("the send path refreshes a stale catalog and waits for it");
+        let wait = body
+            .find("crate::catalog_freshness::WAIT_BEFORE_SEND")
+            .expect("the send path bounds the wait");
+
+        let consent = body
+            .find(concat!(
+                "crate::actions::request_disclosure",
+                "_if_changed("
+            ))
+            .expect("the send path checks the consent mark");
+        let send = body
+            .find(concat!("self.transcribe_via_anonen", "_cloud("))
+            .expect("the send itself");
+        assert!(refresh < wait, "start the refresh before waiting for it");
+        assert!(
+            wait < consent,
+            "check the mark against the refreshed catalog"
+        );
+        assert!(consent < send, "check the mark before any audio leaves");
+
+        let start = src
+            .find("fn transcribe_via_anonen_cloud(")
+            .expect("transcribe_via_anonen_cloud");
+        let end = start
+            + src[start..]
+                .find("\n    }\n")
+                .expect("the end of transcribe_via_anonen_cloud");
+        let body = &src[start..end];
+        let backoff = body
+            .find(concat!("crate::actions::sleep_unless", "_abandoned("))
+            .expect("the wait between attempts");
+        let attempts = body
+            .find("for attempt in 0..MAX_ATTEMPTS {")
+            .expect("the attempts loop");
+        let recheck = body[backoff..]
+            .find(concat!(
+                "crate::actions::request_disclosure",
+                "_if_changed("
+            ))
+            .map(|i| backoff + i)
+            .expect("every attempt checks the consent mark");
+        assert!(attempts < backoff, "the wait is inside the attempts loop");
+
+        assert!(
+            body[backoff..recheck].contains("\n            }\n"),
+            "check every attempt, not only the retries"
+        );
+        let resend = body[backoff..]
+            .find(concat!("crate::actions::run_cancellable", "_from("))
+            .map(|i| backoff + i)
+            .expect("the next attempt");
+        assert!(
+            recheck < resend,
+            "check the mark again before the next attempt"
+        );
     }
 }

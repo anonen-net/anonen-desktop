@@ -85,9 +85,17 @@ pub async fn anonen_cloud_fetch_models(
             .timeout(std::time::Duration::from_secs(10))
             .build()
             .map_err(|e| format!("HTTP client build failed: {}", e))?;
-        let models = crate::remote_asr::fetch_gateway_models(&client, &base_url)?;
-        model_manager.register_cloud_models(&models);
-        Ok(models)
+        let started = crate::catalog_freshness::Stamp::now();
+        let models = match crate::remote_asr::fetch_gateway_models(&client, &base_url) {
+            Ok(models) => models,
+            Err(e) => {
+                model_manager.mark_cloud_catalog_outdated();
+                return Err(e);
+            }
+        };
+        model_manager.register_cloud_models(&models, started);
+
+        Ok(model_manager.current_cloud_models())
     })
     .await
     .map_err(|e| format!("task join failed: {}", e))?

@@ -17,6 +17,20 @@ impl std::fmt::Display for CloudModelInvalidError {
 impl std::error::Error for CloudModelInvalidError {}
 
 #[derive(Debug, Clone, Copy)]
+pub struct CloudDisclosureRequiredError;
+
+impl std::fmt::Display for CloudDisclosureRequiredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "the data policy of the selected model changed; shown before sending"
+        )
+    }
+}
+
+impl std::error::Error for CloudDisclosureRequiredError {}
+
+#[derive(Debug, Clone, Copy)]
 pub struct CloudAudioTooLongError;
 
 impl std::fmt::Display for CloudAudioTooLongError {
@@ -200,6 +214,8 @@ pub fn classify_terminal(err: &AsrGatewayErr) -> Terminal {
 #[derive(Debug)]
 pub enum Failure<'a> {
     ModelRetired,
+
+    DisclosureRequired,
     AudioTooLong,
     CapExceeded(&'a CloudCapExceededError),
     SubscriptionRequired,
@@ -215,6 +231,8 @@ pub enum Failure<'a> {
 pub fn failure_of(err: &anyhow::Error) -> Failure<'_> {
     if err.downcast_ref::<CloudModelInvalidError>().is_some() {
         Failure::ModelRetired
+    } else if err.downcast_ref::<CloudDisclosureRequiredError>().is_some() {
+        Failure::DisclosureRequired
     } else if err.downcast_ref::<CloudAudioTooLongError>().is_some() {
         Failure::AudioTooLong
     } else if let Some(cap) = err.downcast_ref::<CloudCapExceededError>() {
@@ -242,6 +260,7 @@ impl Failure<'_> {
         matches!(
             self,
             Self::ModelRetired
+                | Self::DisclosureRequired
                 | Self::AudioTooLong
                 | Self::CapExceeded(_)
                 | Self::SubscriptionRequired
@@ -298,6 +317,11 @@ pub fn failure_notification(failure: &Failure<'_>, audio_saved: bool) -> Failure
             body: format!(
                 "ネットワークに接続できませんでした。接続を確認してもう一度お試しください。{recording}"
             ),
+        },
+
+        Failure::DisclosureRequired => FailureNotification {
+            title: FAILED,
+            body: recording.to_string(),
         },
         Failure::ModelRetired => FailureNotification {
             title: "あのねん: このモデルは提供終了しました",
@@ -614,6 +638,14 @@ mod tests {
     }
 
     #[test]
+    fn a_changed_policy_found_right_before_sending_is_told_by_the_dialog() {
+        let err = anyhow::Error::new(CloudDisclosureRequiredError);
+        assert!(matches!(failure_of(&err), Failure::DisclosureRequired));
+
+        assert_eq!(retry_failure_reply(&err), ALREADY_NOTIFIED);
+    }
+
+    #[test]
     fn a_failure_with_its_own_event_does_not_also_get_the_generic_toast() {
         let cap = CloudCapExceededError {
             which: None,
@@ -623,6 +655,7 @@ mod tests {
         };
         for failure in [
             Failure::ModelRetired,
+            Failure::DisclosureRequired,
             Failure::AudioTooLong,
             Failure::CapExceeded(&cap),
             Failure::SubscriptionRequired,
@@ -752,6 +785,7 @@ mod tests {
     fn every_failure(cap: &CloudCapExceededError) -> Vec<Failure<'_>> {
         let mut all = vec![
             Failure::ModelRetired,
+            Failure::DisclosureRequired,
             Failure::AudioTooLong,
             Failure::CapExceeded(cap),
             Failure::SubscriptionRequired,

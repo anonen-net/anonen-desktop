@@ -91,6 +91,11 @@ async fn retry_history_entry_inner(
 ) -> Result<(), String> {
     ensure_retranscribe_allowed(app)?;
 
+    let selected = crate::settings::get_settings(app).selected_model;
+    if crate::actions::request_disclosure_if_changed(app, &selected) {
+        return Err(crate::cloud_failure::ALREADY_NOTIFIED.to_string());
+    }
+
     let entry = history_manager
         .get_entry_by_id(id)
         .await

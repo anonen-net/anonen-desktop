@@ -315,8 +315,8 @@ where a permissive option is offered, that is the one this application uses.
 - markup5ever 0.38.0 — Copyright (c) 2014 The html5ever Project Developers
 - matches 0.1.10 — Copyright (c) 2014-2016 Simon Sapin
 - memchr 2.8.0 — Copyright (c) 2015 Andrew Gallant
-- memmap2 0.9.10 — Copyright (c) 2020 Yevhenii Reizner
-- memmap2 0.9.10 — Copyright (c) 2015 Dan Burkert
+- memmap2 0.9.11 — Copyright (c) 2020 Yevhenii Reizner
+- memmap2 0.9.11 — Copyright (c) 2015 Dan Burkert
 - memoffset 0.9.1 — Copyright (c) 2017 Gilad Naaman
 - memoize-one 6.0.0 — Copyright (c) 2019 Alexander Reardon
 - mime 0.3.17 — Copyright (c) 2014 Sean McArthur
@@ -464,8 +464,8 @@ where a permissive option is offered, that is the one this application uses.
 - rust_decimal 1.40.0 — Copyright (c) 2016 Paul Mason
 - rustc_version 0.4.1 — Copyright (c) 2016 The Rust Project Developers
 - rustfft 6.4.1 — Copyright (c) 2015 The RustFFT Developers
-- rustls 0.23.36 — Copyright (c) 2016, Joseph Birr-Pixton <jpixton@gmail.com>
-- rustls 0.23.36 — Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
+- rustls 0.23.46 — Copyright (c) 2016, Joseph Birr-Pixton <jpixton@gmail.com>
+- rustls 0.23.46 — Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
 - rustls-native-certs 0.8.3 — Copyright (c) 2016, Joseph Birr-Pixton <jpixton@gmail.com>
 - rustls-native-certs 0.8.3 — Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
 - rustls-pki-types 1.14.0 — Copyright (c) 2023 Dirkjan Ochtman <dirkjan@ochtman.nl>
@@ -898,7 +898,7 @@ where a permissive option is offered, that is the one this application uses.
 - markup5ever 0.14.1
 - markup5ever 0.38.0
 - matches 0.1.10
-- memmap2 0.9.10
+- memmap2 0.9.11
 - memoffset 0.9.1
 - mime 0.3.17
 - minicov 0.3.8
@@ -998,7 +998,7 @@ where a permissive option is offered, that is the one this application uses.
 - rustc_version 0.4.1
 - rustfft 6.4.1
 - rustix 1.1.3
-- rustls 0.23.36
+- rustls 0.23.46
 - rustls-native-certs 0.8.3
 - rustls-pki-types 1.14.0
 - rustversion 1.0.22
@@ -1334,7 +1334,7 @@ DEALINGS IN THE SOFTWARE.
 - rsa 0.9.10
 - rustc_version 0.4.1
 - rustix 1.1.3
-- rustls 0.23.36
+- rustls 0.23.46
 - rustls-native-certs 0.8.3
 - rustls-platform-verifier 0.6.2
 - scopeguard 1.2.0
@@ -5118,7 +5118,7 @@ SOFTWARE.
 ### Applies to
 
 - hyper-rustls 0.27.7
-- rustls 0.23.36
+- rustls 0.23.46
 - rustls-native-certs 0.8.3
 
 ```
@@ -11932,7 +11932,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### Applies to
 
-- rustls-webpki 0.103.9
+- rustls-webpki 0.103.15
 
 ```
 Except as otherwise noted, this project is licensed under the following
@@ -25167,7 +25167,7 @@ licences; see files named LICENSE.*.txt for details.
 
 ### Applies to
 
-- memmap2 0.9.10
+- memmap2 0.9.11
 
 ```
                               Apache License

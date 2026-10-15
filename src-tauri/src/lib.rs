@@ -1,6 +1,7 @@
 mod actions;
 mod audio_feedback;
 pub mod audio_toolkit;
+mod catalog_freshness;
 pub mod cli;
 mod clipboard;
 mod cloud_failure;

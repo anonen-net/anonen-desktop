@@ -118,6 +118,10 @@ pub struct ModelManager {
     cloud_order: Mutex<Vec<String>>,
 
     cloud_policy_marks: Mutex<HashMap<String, String>>,
+
+    cloud_catalog_clock: Mutex<crate::catalog_freshness::CatalogClock>,
+
+    cloud_catalog_models: Mutex<Vec<crate::remote_asr::AsrGatewayModel>>,
 }
 
 impl ModelManager {
@@ -236,6 +240,8 @@ impl ModelManager {
             remote_model_configs: Mutex::new(remote_model_configs),
             cloud_order: Mutex::new(Vec::new()),
             cloud_policy_marks: Mutex::new(HashMap::new()),
+            cloud_catalog_clock: Mutex::new(crate::catalog_freshness::CatalogClock::default()),
+            cloud_catalog_models: Mutex::new(Vec::new()),
         };
 
         manager.migrate_bundled_models()?;
@@ -272,10 +278,24 @@ impl ModelManager {
             .cloned()
     }
 
-    pub fn register_cloud_models(&self, cloud_models: &[crate::remote_asr::AsrGatewayModel]) {
+    pub fn register_cloud_models(
+        &self,
+        cloud_models: &[crate::remote_asr::AsrGatewayModel],
+        started: crate::catalog_freshness::Stamp,
+    ) -> bool {
         if cloud_models.is_empty() {
             warn!("[anonen-cloud] /v1/models returned no models; keeping existing cards");
-            return;
+
+            self.mark_cloud_catalog_outdated();
+            return false;
+        }
+
+        let mut clock = self.cloud_catalog_clock.lock().unwrap();
+        if !clock.accept(started) {
+            info!(
+                "[anonen-cloud] an older /v1/models fetch arrived late; keeping the newer catalog"
+            );
+            return false;
         }
 
         let base_url = self.anonen_cloud_base_url();
@@ -344,6 +364,34 @@ impl ModelManager {
             "[anonen-cloud] registered {} cloud model card(s) from /v1/models",
             cloud_models.len()
         );
+        drop((models, configs, order, marks));
+        let changed = {
+            let mut last = self.cloud_catalog_models.lock().unwrap();
+            let changed =
+                serde_json::to_string(&*last).ok() != serde_json::to_string(cloud_models).ok();
+            *last = cloud_models.to_vec();
+            changed
+        };
+        drop(clock);
+        changed
+    }
+
+    pub fn current_cloud_models(&self) -> Vec<crate::remote_asr::AsrGatewayModel> {
+        self.cloud_catalog_models.lock().unwrap().clone()
+    }
+
+    pub fn mark_cloud_catalog_outdated(&self) {
+        self.cloud_catalog_clock
+            .lock()
+            .unwrap()
+            .mark_outdated(Instant::now());
+    }
+
+    pub fn cloud_catalog_is_stale(&self) -> bool {
+        self.cloud_catalog_clock
+            .lock()
+            .unwrap()
+            .is_stale(crate::catalog_freshness::Stamp::now())
     }
 
     pub fn has_registered_cloud_models(&self) -> bool {

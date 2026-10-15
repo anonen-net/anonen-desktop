@@ -32,6 +32,23 @@ struct RecordingErrorEvent {
     detail: Option<String>,
 }
 
+pub(crate) fn request_disclosure_if_changed(app: &AppHandle, selected: &str) -> bool {
+    let mark = app.state::<Arc<ModelManager>>().cloud_policy_mark(selected);
+    let settings = get_settings(app);
+    if !crate::model_data_policy::blocks_sending(
+        &settings.acknowledged_cloud_policies,
+        mark.as_deref(),
+    ) {
+        return false;
+    }
+    let _ = app.emit("anonen-model-disclosure-required", selected.to_string());
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    true
+}
+
 fn check_preconditions(app: &AppHandle) -> Option<(&'static str, String)> {
     let auth = app.state::<AnonenCloudAuthManager>();
     if !auth.status().signed_in {
@@ -63,6 +80,13 @@ fn check_preconditions(app: &AppHandle) -> Option<(&'static str, String)> {
             return Some((
                 "cloud_model_unavailable",
                 "このモデルは提供終了しました。新しいモデルを選んでください".to_string(),
+            ));
+        }
+
+        if request_disclosure_if_changed(app, selected) {
+            return Some((
+                "model_disclosure_required",
+                "The data policy of the selected model changed; shown before sending.".to_string(),
             ));
         }
 
@@ -490,6 +514,8 @@ impl ShortcutAction for TranscribeAction {
         let kickoff_started = Instant::now();
         tm.initiate_model_load();
         tm.warm_connection();
+
+        tm.refresh_catalog_if_stale();
         let rm_clone = Arc::clone(&rm);
         std::thread::spawn(move || {
             if let Err(e) = rm_clone.preload_vad() {
@@ -1300,6 +1326,45 @@ mod tests {
         assert_eq!(
             strip_think_block("<think>never closed"),
             "<think>never closed"
+        );
+    }
+
+    #[test]
+    fn a_changed_policy_is_shown_before_recording_and_without_a_toast() {
+        let src = include_str!("actions.rs").replace("\r\n", "\n");
+        let start = src
+            .find("fn check_preconditions(")
+            .expect("check_preconditions");
+        let end = start
+            + src[start..]
+                .find("\n}\n")
+                .expect("the end of check_preconditions");
+        let body = &src[start..end];
+        let gate = body
+            .find("request_disclosure_if_changed(")
+            .expect("the start checks the data policy");
+        let network = body.find("probe_url").expect("the network gate");
+        assert!(gate < network, "show the dialog before probing the network");
+
+        let app = include_str!("../../src/App.tsx");
+        assert!(
+            app.contains("error_type === \"model_disclosure_required\""),
+            "App.tsx must handle the type instead of the generic toast"
+        );
+
+        let history = include_str!("commands/history.rs");
+        assert!(history.contains("request_disclosure_if_changed(app, &selected)"));
+
+        let rec = src
+            .find("impl ShortcutAction for TranscribeAction {\n    fn start(")
+            .expect("the recording start");
+        let rec_end = rec
+            + src[rec..]
+                .find("\n    }\n")
+                .expect("the end of the recording start");
+        assert!(
+            src[rec..rec_end].contains(concat!("tm.refresh_catalog", "_if_stale();")),
+            "the recording start refreshes a stale catalog"
         );
     }
 }

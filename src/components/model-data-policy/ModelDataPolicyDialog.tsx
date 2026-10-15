@@ -38,7 +38,9 @@ export function ModelDataPolicyDialog() {
       (event) => {
         const cloud = useAnonenCloudStore.getState();
         if (cloud.policyNeedingDisclosure(event.payload)) {
-          cloud.showPolicy(event.payload, true);
+          const isCurrent =
+            event.payload === useModelStore.getState().currentModel;
+          cloud.showPolicy(event.payload, true, isCurrent);
         }
       },
     );
