@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { ask } from "@tauri-apps/plugin-dialog";
 import {
   ArrowRightLeft,
   Check,
@@ -28,6 +27,7 @@ import {
   useAnonenCloudStore,
 } from "@/stores/anonenCloudStore";
 import { useModelStore } from "@/stores/modelStore";
+import { useConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { retryFailureToast } from "@/lib/failureNotice";
 import {
   lastRetranscribeConfirm,
@@ -96,6 +96,8 @@ export const HistorySettings: React.FC = () => {
 
   const { t } = useTranslation();
   const osType = useOsType();
+  const { confirmInApp: confirmClearAll, confirmDialog: clearAllDialog } =
+    useConfirmDialog();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -295,9 +297,12 @@ export const HistorySettings: React.FC = () => {
   };
 
   const handleClearAll = async () => {
-    const confirmed = await ask(t("settings.history.clearAllConfirm"), {
+    const confirmed = await confirmClearAll({
       title: t("settings.history.clearAllTitle"),
-      kind: "warning",
+      body: t("settings.history.clearAllConfirm"),
+      okLabel: t("settings.history.clearAll"),
+      cancelLabel: t("common.cancel"),
+      danger: true,
     });
     if (!confirmed) return;
     try {
@@ -360,6 +365,8 @@ export const HistorySettings: React.FC = () => {
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-2">
+      {clearAllDialog}
+
       <div className="px-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3 shrink-0">
           <h2 className="text-xs font-medium text-mid-gray uppercase tracking-wide">
@@ -429,6 +436,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   const { t, i18n } = useTranslation();
   const [showCopied, setShowCopied] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const { confirmInApp, confirmDialog } = useConfirmDialog();
 
   const hasTranscription = entry.transcription_text.trim().length > 0;
 
@@ -507,9 +515,9 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     ) {
       return true;
     }
-    const ok = await ask(t("settings.history.retranscribeUsageConfirm.body"), {
-      title: t("app.name"),
-      kind: "info",
+
+    const ok = await confirmInApp({
+      body: t("settings.history.retranscribeUsageConfirm.body"),
       okLabel: t("settings.history.retranscribeUsageConfirm.ok"),
       cancelLabel: t("settings.history.retranscribeUsageConfirm.cancel"),
     });
@@ -544,6 +552,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
 
   return (
     <div className="px-4 py-2 pb-5 flex flex-col gap-3">
+      {confirmDialog}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2 min-w-0">
           <p className="text-sm font-medium whitespace-nowrap">

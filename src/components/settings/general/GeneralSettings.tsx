@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import LinuxShortcutNotice from "../../LinuxShortcutNotice";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { useConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { commands } from "@/bindings";
 
 import { SettingsGroup } from "../../ui/SettingsGroup";
@@ -40,6 +40,7 @@ import { useThemeStore } from "../../../stores/themeStore";
 
 export const GeneralSettings: React.FC = () => {
   const { t } = useTranslation();
+  const { confirmInApp, confirmDialog } = useConfirmDialog();
   const { audioFeedbackEnabled, getSetting } = useSettings();
 
   const [version, setVersion] = useState("");
@@ -60,9 +61,12 @@ export const GeneralSettings: React.FC = () => {
   const resetTheme = useThemeStore((s) => s.reset);
 
   const handleResetAll = async () => {
-    const confirmed = await ask(t("settings.resetAll.confirm"), {
+    const confirmed = await confirmInApp({
       title: t("settings.resetAll.title"),
-      kind: "warning",
+      body: t("settings.resetAll.confirm"),
+      okLabel: t("common.reset"),
+      cancelLabel: t("common.cancel"),
+      danger: true,
     });
     if (!confirmed) return;
     resetTheme();
@@ -72,6 +76,8 @@ export const GeneralSettings: React.FC = () => {
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
+      {confirmDialog}
+
       <AnonenCloudPanel />
 
       <LinuxShortcutNotice />

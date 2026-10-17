@@ -7,7 +7,7 @@ import ModelCard from "./ModelCard";
 import { useModelStore } from "../../stores/modelStore";
 import { useAnonenCloudStore } from "../../stores/anonenCloudStore";
 import { isOfferedModel } from "@/lib/modelCatalog";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { useConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface OnboardingProps {
   onModelSelected: () => void;
@@ -17,6 +17,7 @@ interface OnboardingProps {
 
 const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected, onSkip }) => {
   const { t } = useTranslation();
+  const { confirmInApp, confirmDialog } = useConfirmDialog();
   const {
     models,
     currentModel,
@@ -125,15 +126,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected, onSkip }) => {
         model.size_mb >= 1024
           ? `${(model.size_mb / 1024).toFixed(1)} GB`
           : `${Math.round(model.size_mb)} MB`;
-      const ok = await ask(
-        t("onboarding.downloadConfirm.body", { name: model.name, size }),
-        {
-          title: t("onboarding.downloadConfirm.title"),
-          kind: "info",
-          okLabel: t("onboarding.downloadConfirm.ok"),
-          cancelLabel: t("onboarding.downloadConfirm.cancel"),
-        },
-      );
+
+      const ok = await confirmInApp({
+        title: t("onboarding.downloadConfirm.title"),
+        body: t("onboarding.downloadConfirm.body", { name: model.name, size }),
+        okLabel: t("onboarding.downloadConfirm.ok"),
+        cancelLabel: t("onboarding.downloadConfirm.cancel"),
+      });
       if (!ok) return;
     }
     setSelectedModelId(modelId);
@@ -162,6 +161,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onModelSelected, onSkip }) => {
 
   return (
     <div className="h-screen w-screen flex flex-col p-6 gap-4 inset-0">
+      {confirmDialog}
       <div className="flex flex-col items-center gap-2 shrink-0">
         <h1 className="text-4xl font-bold">{t("app.name")}</h1>
         <p className="text-text/70 max-w-md font-medium mx-auto">

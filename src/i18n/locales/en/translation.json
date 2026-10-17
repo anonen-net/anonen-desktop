@@ -540,7 +540,7 @@
       "retranscribe": "Re-transcribe",
       "retranscribeError": "Failed to re-transcribe. Please try again.",
       "retranscribeUsageConfirm": {
-        "body": "Transcribing again uses up part of your allowance.",
+        "body": "Transcribing again adds to your usage.",
         "ok": "Transcribe",
         "cancel": "Cancel"
       },
@@ -896,6 +896,10 @@
     "resendCooldown": "Resend ({{seconds}}s)",
     "retryCaptcha": "Retry security check",
     "captchaFrameTitle": "Security check",
+    "captchaDialog": {
+      "title": "Security check",
+      "body": "Once the check is done, the code is sent automatically."
+    },
     "verify": "Sign in",
     "back": "Back",
     "logout": "Sign out",

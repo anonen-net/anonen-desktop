@@ -330,7 +330,7 @@ pub fn failure_notification(failure: &Failure<'_>, audio_saved: bool) -> Failure
         Failure::AudioTooLong => FailureNotification {
             title: "あのねん: 録音が1回あたりの上限を超えています",
             body: if audio_saved {
-                "録音は履歴に残っています。履歴からローカルモデルで再転写できます。".to_string()
+                "録音は履歴に残っています。履歴からローカルモデルで再文字起こしできます。".to_string()
             } else {
                 "この録音は残っていません。短く区切って、もう一度録音してください。".to_string()
             },
@@ -965,7 +965,10 @@ mod tests {
             assert!(kept.contains("履歴に残っています"), "{failure:?}: {kept}");
             assert!(!lost.contains("履歴に残っています"), "{failure:?}: {lost}");
             assert!(!lost.contains("取り直せます"), "{failure:?}: {lost}");
-            assert!(!lost.contains("再転写できます"), "{failure:?}: {lost}");
+            assert!(
+                !lost.contains("再文字起こしできます"),
+                "{failure:?}: {lost}"
+            );
             assert!(lost.contains("残っていません"), "{failure:?}: {lost}");
         }
     }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/failureNotice";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { DialogFrame } from "@/components/ui/ConfirmDialog";
 import TurnstileChallenge from "./TurnstileChallenge";
 import { SupportActions } from "@/components/settings/SupportActions";
 
@@ -72,8 +73,11 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldownSecs, setCooldownSecs] = useState(0);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+
+  const requestingOtp = useRef(false);
+
+  const pendingEmail = useRef("");
 
   const [wallKey, setWallKey] = useState(subscriptionWallKey(null));
 
@@ -230,7 +234,11 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
     return () => clearTimeout(id);
   }, [cooldownSecs]);
 
-  const handleRequestOtp = async () => {
+  useEffect(() => {
+    if (phase !== "sign_in") setCaptchaOpen(false);
+  }, [phase]);
+
+  const handleRequestOtp = () => {
     const trimmed = email.trim();
     if (!trimmed) {
       setError(t("anonenCloud.errors.emailRequired"));
@@ -240,17 +248,25 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
       setError(t("anonenCloud.errors.emailInvalid"));
       return;
     }
-    if (!captchaToken) {
-      setError(t("anonenCloud.errors.captchaRequired"));
-      return;
-    }
+    setError(null);
+    pendingEmail.current = trimmed;
+    setCaptchaOpen(true);
+  };
+
+  const handleCaptchaToken = (captchaToken: string | null) => {
+    if (!captchaToken || requestingOtp.current) return;
+    const to = pendingEmail.current;
+    setCaptchaOpen(false);
+    if (!EMAIL_PATTERN.test(to)) return;
+    requestingOtp.current = true;
+    void sendOtp(captchaToken, to);
+  };
+
+  const sendOtp = async (captchaToken: string, to: string) => {
     setBusy(true);
     setError(null);
     try {
-      const result = await commands.anonenCloudRequestOtp(
-        trimmed,
-        captchaToken,
-      );
+      const result = await commands.anonenCloudRequestOtp(to, captchaToken);
       if (result.status !== "ok") throw new Error(result.error);
       setOtpSent(true);
       setCooldownSecs(60);
@@ -264,8 +280,7 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
       }
     } finally {
       setBusy(false);
-      setCaptchaToken(null);
-      setCaptchaResetKey((key) => key + 1);
+      requestingOtp.current = false;
     }
   };
 
@@ -308,13 +323,13 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
 
   if (phase === "no_subscription") {
     return (
-      <div className="min-h-screen w-screen flex flex-col p-6 gap-4 items-center justify-center overflow-y-auto">
+      <div className="jp-phrase-wrap min-h-screen w-screen flex flex-col p-6 gap-4 items-center justify-center overflow-y-auto">
         <h1 className="text-2xl font-bold">{t("app.name")}</h1>
         <div className="max-w-sm w-full flex flex-col items-center gap-3 text-center">
           <div className="p-3 rounded-full bg-amber-500/20">
             <Check className="w-8 h-8 text-amber-400" />
           </div>
-          <p className="text-sm text-text/70">{t(wallKey)}</p>
+          <p className="text-sm text-text/70 text-balance">{t(wallKey)}</p>
           <Button
             size="sm"
             variant="ghost"
@@ -352,15 +367,39 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
   }
 
   return (
-    <div className="min-h-screen w-screen flex flex-col p-6 gap-4 items-center justify-center overflow-y-auto">
+    <div className="jp-phrase-wrap min-h-screen w-screen flex flex-col p-6 gap-4 items-center justify-center overflow-y-auto">
       <h1 className="text-2xl font-bold">{t("app.name")}</h1>
+
+      {captchaOpen && (
+        <DialogFrame
+          labelledBy="sign-in-captcha-title"
+          onEscape={() => setCaptchaOpen(false)}
+        >
+          <h2 id="sign-in-captcha-title" className="text-base font-semibold">
+            {t("anonenCloud.captchaDialog.title")}
+          </h2>
+          <p className="text-sm text-text/70">
+            {t("anonenCloud.captchaDialog.body")}
+          </p>
+          <TurnstileChallenge onTokenChange={handleCaptchaToken} resetKey={0} />
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="px-3 py-1.5 text-sm rounded border border-mid-gray/20 hover:bg-mid-gray/10 transition-colors"
+              onClick={() => setCaptchaOpen(false)}
+            >
+              {t("common.close")}
+            </button>
+          </div>
+        </DialogFrame>
+      )}
 
       <div className="max-w-sm w-full flex flex-col items-center gap-3">
         <div className="text-center">
           <h2 className="text-base font-semibold text-text mb-1">
             {t("authOnboarding.title")}
           </h2>
-          <p className="text-text/70 text-xs">
+          <p className="text-text/70 text-xs text-balance">
             {t("anonenCloud.signInPrompt")}
           </p>
         </div>
@@ -386,21 +425,12 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
                 size="sm"
                 variant="primary"
                 onClick={handleRequestOtp}
-                disabled={busy || !captchaToken}
+                disabled={busy}
               >
                 {t("anonenCloud.sendOtp")}
               </Button>
             )}
           </div>
-
-          {(otpSent
-            ? cooldownSecs === 0
-            : EMAIL_PATTERN.test(email.trim())) && (
-            <TurnstileChallenge
-              onTokenChange={setCaptchaToken}
-              resetKey={captchaResetKey}
-            />
-          )}
 
           {otpSent && (
             <div className="space-y-2">
@@ -434,7 +464,7 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={() => handleRequestOtp()}
-                  disabled={busy || cooldownSecs > 0 || !captchaToken}
+                  disabled={busy || cooldownSecs > 0}
                 >
                   {cooldownSecs > 0
                     ? t("anonenCloud.resendCooldown", {
@@ -448,8 +478,6 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
                   onClick={() => {
                     setOtpSent(false);
                     setToken("");
-                    setCaptchaToken(null);
-                    setCaptchaResetKey((key) => key + 1);
                   }}
                   disabled={busy}
                 >
@@ -466,7 +494,7 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
           </div>
         )}
 
-        <p className="text-xs text-text/50 text-center leading-relaxed">
+        <p className="text-xs text-text/50 text-center leading-relaxed text-balance">
           {t("authOnboarding.noAccountGuide")}
         </p>
 

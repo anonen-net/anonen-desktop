@@ -72,6 +72,11 @@
   --color-mid-gray: #a8a29e;
 }
 
+.jp-phrase-wrap:lang(ja) {
+  word-break: auto-phrase;
+  text-wrap: pretty;
+}
+
 :root[data-platform="macos"] {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
