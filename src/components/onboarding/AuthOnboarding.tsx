@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Mail, Loader2, Check, History } from "lucide-react";
 import { commands, type AnonenCloudUsageSnapshot } from "@/bindings";
@@ -6,9 +6,12 @@ import { isActiveSubscriptionStatus } from "@/stores/anonenCloudStore";
 import {
   NO_ACTIVE_SUBSCRIPTION,
   SIGNED_OUT_CHECK_MS,
+  quietRecheckVerdict,
+  shouldRecheckOnReturn,
   subscriptionWallKey,
   takeSessionEndedNote,
   withinMs,
+  type QuietLookupAnswer,
 } from "@/lib/failureNotice";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -40,6 +43,21 @@ async function signedOut(): Promise<boolean> {
     null,
   );
   return status !== null && status.status === "ok" && !status.data.signed_in;
+}
+
+async function quietLookup(): Promise<{
+  answer: QuietLookupAnswer;
+  signedOut: boolean;
+}> {
+  const fresh = await commands.anonenCloudFetchUsage();
+  if (fresh.status === "ok") {
+    return {
+      answer: { ok: true, active: hasValidSubscription(fresh.data) },
+      signedOut: false,
+    };
+  }
+  const gone = fresh.error !== NO_ACTIVE_SUBSCRIPTION && (await signedOut());
+  return { answer: { ok: false, error: fresh.error }, signedOut: gone };
 }
 
 const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
@@ -151,6 +169,59 @@ const AuthOnboarding: React.FC<AuthOnboardingProps> = ({
       }
     };
     checkExisting();
+  }, []);
+
+  const latest = useRef({ phase, busy, setupAndProceed, returnToSignIn });
+  useEffect(() => {
+    latest.current = { phase, busy, setupAndProceed, returnToSignIn };
+  });
+  const recheck = useRef({
+    inFlight: false,
+    lastCheckAt: null as number | null,
+  });
+  useEffect(() => {
+    if (phase === "no_subscription") recheck.current.lastCheckAt = Date.now();
+  }, [phase]);
+  useEffect(() => {
+    let unmounted = false;
+    const onReturn = async () => {
+      const now = Date.now();
+      const state = recheck.current;
+      if (
+        !shouldRecheckOnReturn({
+          phase: latest.current.phase,
+          busy: latest.current.busy,
+          inFlight: state.inFlight,
+          lastCheckAt: state.lastCheckAt,
+          now,
+        })
+      ) {
+        return;
+      }
+      state.inFlight = true;
+      state.lastCheckAt = now;
+      try {
+        const { answer, signedOut: gone } = await quietLookup();
+        const verdict = quietRecheckVerdict(answer, gone);
+
+        if (unmounted || latest.current.phase !== "no_subscription") return;
+        if (verdict === "proceed") await latest.current.setupAndProceed();
+        else if (verdict === "signIn") latest.current.returnToSignIn();
+      } catch {
+      } finally {
+        state.inFlight = false;
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void onReturn();
+    };
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      unmounted = true;
+      window.removeEventListener("focus", onReturn);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   useEffect(() => {

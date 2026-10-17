@@ -29,6 +29,11 @@ import {
 } from "@/stores/anonenCloudStore";
 import { useModelStore } from "@/stores/modelStore";
 import { retryFailureToast } from "@/lib/failureNotice";
+import {
+  lastRetranscribeConfirm,
+  needsRetranscribeConfirm,
+  noteRetranscribeConfirmed,
+} from "@/lib/cloudUsage";
 import { AudioPlayer, AudioPlayerGroup } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
 
@@ -484,8 +489,41 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     }
   };
 
-  const handleRetranscribe = async () => {
+  const confirmRetranscribe = async (): Promise<boolean> => {
+    let modelId: string | null = null;
     try {
+      const result = await commands.getCurrentModel();
+      if (result.status === "ok") modelId = result.data;
+    } catch {
+      modelId = null;
+    }
+    if (
+      !needsRetranscribeConfirm(
+        modelId,
+        canRetranscribe,
+        lastRetranscribeConfirm(),
+        performance.now(),
+      )
+    ) {
+      return true;
+    }
+    const ok = await ask(t("settings.history.retranscribeUsageConfirm.body"), {
+      title: t("app.name"),
+      kind: "info",
+      okLabel: t("settings.history.retranscribeUsageConfirm.ok"),
+      cancelLabel: t("settings.history.retranscribeUsageConfirm.cancel"),
+    });
+    if (ok) noteRetranscribeConfirmed(performance.now());
+    return ok;
+  };
+
+  const retranscribeBusy = useRef(false);
+
+  const handleRetranscribe = async () => {
+    if (retranscribeBusy.current) return;
+    retranscribeBusy.current = true;
+    try {
+      if (!(await confirmRetranscribe())) return;
       setRetrying(true);
       await retryTranscription(entry.id);
     } catch (error) {
@@ -498,6 +536,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
       if (message !== null) toast.error(message);
     } finally {
       setRetrying(false);
+      retranscribeBusy.current = false;
     }
   };
 

@@ -93,6 +93,38 @@ export function withinMs<T, F>(
   });
 }
 
+export const QUIET_RECHECK_GAP_MS = 5_000;
+
+export function shouldRecheckOnReturn(state: {
+  phase: string;
+  busy: boolean;
+  inFlight: boolean;
+  lastCheckAt: number | null;
+  now: number;
+}): boolean {
+  return (
+    state.phase === "no_subscription" &&
+    !state.busy &&
+    !state.inFlight &&
+    (state.lastCheckAt === null ||
+      state.now < state.lastCheckAt ||
+      state.now - state.lastCheckAt >= QUIET_RECHECK_GAP_MS)
+  );
+}
+
+export type QuietLookupAnswer =
+  | { ok: true; active: boolean }
+  | { ok: false; error: string };
+
+export function quietRecheckVerdict(
+  answer: QuietLookupAnswer,
+  signedOut: boolean,
+): "proceed" | "stay" | "signIn" {
+  if (answer.ok) return answer.active ? "proceed" : "stay";
+  if (answer.error !== NO_ACTIVE_SUBSCRIPTION && signedOut) return "signIn";
+  return "stay";
+}
+
 export function capToastKeys(
   suspended: boolean,
   hasResetsAt: boolean,

@@ -539,6 +539,11 @@
       "deleteError": "Failed to delete entry. Please try again.",
       "retranscribe": "Re-transcribe",
       "retranscribeError": "Failed to re-transcribe. Please try again.",
+      "retranscribeUsageConfirm": {
+        "body": "Transcribing again uses up part of your allowance.",
+        "ok": "Transcribe",
+        "cancel": "Cancel"
+      },
       "retranscribeWithPostProcess": "Re-transcribe with post-processing",
       "retranscribeWithPostProcessError": "Failed to re-transcribe with post-processing. Please try again.",
       "retranscribeOpus": "Re-transcribe with Opus",

@@ -74,3 +74,32 @@ export function formatResetDate(iso: string, language: string): string {
     day: "numeric",
   }).format(d);
 }
+
+export const RETRANSCRIBE_CONFIRM_QUIET_MS = 3 * 60 * 1000;
+
+const ANONEN_CLOUD_PREFIX = "anonen-cloud:";
+
+export function needsRetranscribeConfirm(
+  modelId: string | null,
+  entitled: boolean,
+  confirmedAt: number | null,
+  now: number,
+): boolean {
+  if (!entitled) return false;
+  if (modelId !== null && !modelId.startsWith(ANONEN_CLOUD_PREFIX)) {
+    return false;
+  }
+  if (confirmedAt === null) return true;
+  const elapsed = now - confirmedAt;
+  return elapsed < 0 || elapsed >= RETRANSCRIBE_CONFIRM_QUIET_MS;
+}
+
+let retranscribeConfirmedAt: number | null = null;
+
+export function lastRetranscribeConfirm(): number | null {
+  return retranscribeConfirmedAt;
+}
+
+export function noteRetranscribeConfirmed(at: number): void {
+  retranscribeConfirmedAt = at;
+}
