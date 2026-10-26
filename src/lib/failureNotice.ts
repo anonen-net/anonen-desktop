@@ -56,6 +56,20 @@ export const ALREADY_NOTIFIED = "already-notified";
 
 export const NOTICE_PREFIX = "notice:";
 
+export const UPDATE_REQUIRED_NOTICES: ReadonlySet<string> = new Set([
+  "seal_outdated",
+  "seal_outdated_after_send",
+]);
+
+export const isUpdateRequiredFailure = (error: unknown): boolean => {
+  const message =
+    error instanceof Error ? error.message.trim() : String(error ?? "").trim();
+  return (
+    message.startsWith(NOTICE_PREFIX) &&
+    UPDATE_REQUIRED_NOTICES.has(message.slice(NOTICE_PREFIX.length))
+  );
+};
+
 export const retryFailureToast = (
   error: unknown,
   fallback: string,

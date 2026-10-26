@@ -13,6 +13,11 @@ import {
   resolvePortableInstallerUrl,
   PORTABLE_RELEASES_URL,
 } from "./portableInstaller";
+import { updateFromNotice } from "./updateFromNotice";
+import {
+  DOWNLOAD_PAGE_URL,
+  UPDATE_REQUIRED_INSTALL_EVENT,
+} from "../../lib/updateRequired";
 
 interface UpdateCheckerProps {
   className?: string;
@@ -125,6 +130,33 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       isManualCheckRef.current = false;
     }
   };
+
+  const startUpdateFromNotice = () =>
+    updateFromNotice({
+      updateChecksEnabled,
+      check,
+      offer: async (update) => {
+        setUpdateAvailable(true);
+        setAvailableVersion(update.version);
+        setShowUpToDate(false);
+        setPortableInstallerUrl(
+          resolvePortableInstallerUrl(update.rawJson, platform(), arch()),
+        );
+        await askToInstall();
+      },
+      openDownloadPage: () => openUrl(DOWNLOAD_PAGE_URL),
+    });
+
+  const startUpdateFromNoticeRef = useRef(startUpdateFromNotice);
+  startUpdateFromNoticeRef.current = startUpdateFromNotice;
+  useEffect(() => {
+    const unlisten = listen(UPDATE_REQUIRED_INSTALL_EVENT, () => {
+      void startUpdateFromNoticeRef.current();
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   const handleManualUpdateCheck = () => {
     if (!updateChecksEnabled) return;

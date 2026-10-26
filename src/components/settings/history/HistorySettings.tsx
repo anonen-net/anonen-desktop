@@ -28,7 +28,11 @@ import {
 } from "@/stores/anonenCloudStore";
 import { useModelStore } from "@/stores/modelStore";
 import { useConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { retryFailureToast } from "@/lib/failureNotice";
+import {
+  isUpdateRequiredFailure,
+  retryFailureToast,
+} from "@/lib/failureNotice";
+import { askToUpdate, serverUpdateRequired } from "@/lib/updateRequired";
 import {
   lastRetranscribeConfirm,
   needsRetranscribeConfirm,
@@ -520,6 +524,8 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
       body: t("settings.history.retranscribeUsageConfirm.body"),
       okLabel: t("settings.history.retranscribeUsageConfirm.ok"),
       cancelLabel: t("settings.history.retranscribeUsageConfirm.cancel"),
+
+      align: "center",
     });
     if (ok) noteRetranscribeConfirmed(performance.now());
     return ok;
@@ -531,11 +537,19 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     if (retranscribeBusy.current) return;
     retranscribeBusy.current = true;
     try {
+      if (await serverUpdateRequired()) {
+        await askToUpdate(confirmInApp, t);
+        return;
+      }
       if (!(await confirmRetranscribe())) return;
       setRetrying(true);
       await retryTranscription(entry.id);
     } catch (error) {
       console.error("Failed to re-transcribe:", error);
+      if (isUpdateRequiredFailure(error)) {
+        await askToUpdate(confirmInApp, t);
+        return;
+      }
       const message = retryFailureToast(
         error,
         t("settings.history.retranscribeError"),

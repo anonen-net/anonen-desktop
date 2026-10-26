@@ -525,6 +525,7 @@ pub fn run(cli_args: CliArgs) {
             commands::history::get_audio_file_path,
             commands::history::delete_history_entry,
             commands::history::prefetch_enclave_key,
+            commands::history::server_update_required,
             commands::history::retry_history_entry_transcription,
             commands::history::update_history_retention,
             commands::history::clear_all_history,
@@ -726,6 +727,12 @@ pub fn run(cli_args: CliArgs) {
                             log::error!("Failed to set activation policy: {}", e);
                         }
                     }
+                }
+            }
+
+            tauri::WindowEvent::Focused(true) if window.label() == "main" => {
+                if let Some(tm) = window.app_handle().try_state::<Arc<TranscriptionManager>>() {
+                    tm.prefetch_enclave_key();
                 }
             }
             tauri::WindowEvent::ThemeChanged(theme) => {

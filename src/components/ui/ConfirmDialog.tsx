@@ -32,8 +32,10 @@ export function releaseConfirm(): void {
 export const DialogFrame: React.FC<{
   labelledBy: string;
   onEscape: () => void;
+
+  fit?: boolean;
   children: React.ReactNode;
-}> = ({ labelledBy, onEscape, children }) => {
+}> = ({ labelledBy, onEscape, fit = false, children }) => {
   const onEscapeRef = useRef(onEscape);
   useEffect(() => {
     onEscapeRef.current = onEscape;
@@ -71,7 +73,9 @@ export const DialogFrame: React.FC<{
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className="jp-phrase-wrap bg-background border border-mid-gray/20 rounded-lg p-6 max-w-md w-full mx-4 space-y-4 outline-none"
+        className={`jp-phrase-wrap bg-background border border-mid-gray/20 rounded-lg p-6 ${
+          fit ? "w-auto min-w-[16rem] max-w-md" : "max-w-md w-full"
+        } mx-4 space-y-4 outline-none`}
       >
         {children}
       </div>
@@ -88,6 +92,8 @@ export interface ConfirmOptions {
   cancelLabel: string;
 
   danger?: boolean;
+
+  align?: "end" | "center";
 }
 
 export function useConfirmDialog(): {
@@ -137,23 +143,38 @@ export function useConfirmDialog(): {
     };
   }, []);
 
+  const centered = options?.align === "center";
   const confirmDialog = options && (
-    <DialogFrame labelledBy={labelId} onEscape={() => settle(false)}>
+    <DialogFrame
+      labelledBy={labelId}
+      onEscape={() => settle(false)}
+      fit={centered}
+    >
       {options.title ? (
         <>
-          <h2 id={labelId} className="text-base font-semibold">
+          <h2
+            id={labelId}
+            className={`text-base font-semibold${centered ? " text-center" : ""}`}
+          >
             {options.title}
           </h2>
-          <p className="text-sm text-text/70 whitespace-pre-line">
+          <p
+            className={`text-sm text-text/70 whitespace-pre-line${centered ? " text-center" : ""}`}
+          >
             {options.body}
           </p>
         </>
       ) : (
-        <p id={labelId} className="text-sm whitespace-pre-line">
+        <p
+          id={labelId}
+          className={`text-sm whitespace-pre-line${centered ? " text-center" : ""}`}
+        >
           {options.body}
         </p>
       )}
-      <div className="flex gap-2 justify-end">
+      <div
+        className={`flex ${centered ? "gap-4 justify-center" : "gap-2 justify-end"}`}
+      >
         <button
           type="button"
           className="px-3 py-1.5 text-sm rounded border border-mid-gray/20 hover:bg-mid-gray/10 transition-colors"

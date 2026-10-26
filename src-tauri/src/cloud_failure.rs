@@ -256,6 +256,13 @@ pub fn failure_of(err: &anyhow::Error) -> Failure<'_> {
 }
 
 impl Failure<'_> {
+    pub fn is_update_required(&self) -> bool {
+        matches!(
+            self,
+            Self::Seal(CloudSealError::Outdated | CloudSealError::OutdatedAfterSend)
+        )
+    }
+
     pub fn has_own_window_notice(&self) -> bool {
         matches!(
             self,
@@ -363,6 +370,13 @@ pub fn failure_notification(failure: &Failure<'_>, audio_saved: bool) -> Failure
             title: FAILED,
             body: format!("{}。{recording}", CloudAuthFailedError),
         },
+
+        Failure::Seal(CloudSealError::Outdated | CloudSealError::OutdatedAfterSend) => {
+            FailureNotification {
+                title: "あのねん: アプリの更新が必要です",
+                body: recording.to_string(),
+            }
+        }
 
         Failure::Seal(seal) => FailureNotification {
             title: FAILED,
@@ -1062,8 +1076,35 @@ mod tests {
     #[test]
     fn a_seal_failure_is_shown_in_its_own_words() {
         for seal in CloudSealError::ALL {
-            let body = failure_notification(&Failure::Seal(seal), false).body;
-            assert!(body.starts_with(&seal.to_string()), "{seal:?}: {body}");
+            let notification = failure_notification(&Failure::Seal(seal), false);
+            if Failure::Seal(seal).is_update_required() {
+                assert!(
+                    notification.title.contains(&seal.to_string()),
+                    "{seal:?}: {}",
+                    notification.title
+                );
+            } else {
+                assert!(
+                    notification.body.starts_with(&seal.to_string()),
+                    "{seal:?}: {}",
+                    notification.body
+                );
+            }
         }
+    }
+
+    #[test]
+    fn only_the_two_outdated_seals_ask_for_an_update() {
+        for seal in CloudSealError::ALL {
+            assert_eq!(
+                Failure::Seal(seal).is_update_required(),
+                matches!(
+                    seal,
+                    CloudSealError::Outdated | CloudSealError::OutdatedAfterSend
+                ),
+                "{seal:?}"
+            );
+        }
+        assert!(!Failure::Network.is_update_required());
     }
 }

@@ -295,6 +295,23 @@ pub async fn clear_all_history(
 
 #[tauri::command]
 #[specta::specta]
+pub fn server_update_required(
+    app: AppHandle,
+    transcription_manager: State<'_, Arc<TranscriptionManager>>,
+) -> bool {
+    let selected = crate::settings::get_settings(&app).selected_model;
+    let required = crate::actions::update_required_for(
+        &selected,
+        transcription_manager.server_known_outdated(),
+    );
+    if required {
+        transcription_manager.prefetch_enclave_key();
+    }
+    required
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn prefetch_enclave_key(
     transcription_manager: State<'_, Arc<TranscriptionManager>>,
 ) -> Result<(), String> {

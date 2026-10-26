@@ -3,6 +3,7 @@ import { toast, Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { platform } from "@tauri-apps/plugin-os";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import MicClippingNotice from "./components/MicClippingNotice";
 import {
   checkAccessibilityPermission,
@@ -45,6 +46,14 @@ import {
   setSubscriptionToastOn,
 } from "./stores/anonenCloudStore";
 import { commands } from "@/bindings";
+import { useConfirmDialog } from "./components/ui/ConfirmDialog";
+import {
+  askToUpdate,
+  DOWNLOAD_PAGE_URL,
+  serverUpdateRequired,
+  UPDATE_REQUIRED_EVENT,
+  UPDATE_REQUIRED_INSTALL_EVENT,
+} from "@/lib/updateRequired";
 import { getLanguageDirection, initializeRTL } from "@/lib/utils/rtl";
 import { markTutorialSeen, tutorialSeen } from "@/lib/tutorialSeen";
 import {
@@ -61,6 +70,8 @@ const renderSettingsContent = (section: SidebarSection) => {
 
 function App() {
   const { t, i18n } = useTranslation();
+
+  const { confirmInApp, confirmDialog } = useConfirmDialog();
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep | null>(
     null,
   );
@@ -191,6 +202,8 @@ function App() {
         toast.error(t("errors.networkUnavailableTitle"), {
           description: t("errors.networkUnavailable"),
         });
+      } else if (error_type === "update_required") {
+        void askToUpdate(confirmInApp, t);
       } else {
         if (detail) console.error("Recording failed:", detail);
         toast.error(t("errors.recordingFailed"));
@@ -199,7 +212,33 @@ function App() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [t]);
+  }, [t, confirmInApp]);
+
+  const askedAtStartup = useRef(false);
+  useEffect(() => {
+    const unlisten = listen(UPDATE_REQUIRED_EVENT, () => {
+      void askToUpdate(confirmInApp, t);
+    });
+    if (!askedAtStartup.current) {
+      askedAtStartup.current = true;
+      void unlisten.then(async () => {
+        if (await serverUpdateRequired()) await askToUpdate(confirmInApp, t);
+      });
+    }
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [t, confirmInApp]);
+
+  useEffect(() => {
+    if (onboardingStep === "done") return;
+    const unlisten = listen(UPDATE_REQUIRED_INSTALL_EVENT, () => {
+      void openUrl(DOWNLOAD_PAGE_URL);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [onboardingStep]);
 
   useEffect(() => {
     const unlisten = listen("paste-error", () => {
@@ -546,6 +585,7 @@ function App() {
       {content}
 
       <ModelDataPolicyDialog />
+      {confirmDialog}
     </>
   );
 }

@@ -553,14 +553,23 @@ impl TranscriptionManager {
 
         let client_cell = self.http_client.clone();
         let enclave_keys = self.enclave_keys.clone();
+        let app = self.app_handle.clone();
         thread::spawn(move || {
             let client = client_cell.get_or_init(|| {
                 crate::remote_asr::build_shared_client()
                     .expect("Failed to build shared HTTP client")
             });
             let source = crate::sealed::keys_http::HttpAttestationSource::new(client, &base_url);
+            let was_outdated = enclave_keys.known_outdated();
             enclave_keys.prefetch(&source, Self::now_seconds());
+            if !was_outdated && enclave_keys.known_outdated() {
+                crate::actions::raise_update_required(&app);
+            }
         });
+    }
+
+    pub fn server_known_outdated(&self) -> bool {
+        self.enclave_keys.known_outdated()
     }
 
     pub fn warm_connection(&self) {
@@ -675,7 +684,12 @@ impl TranscriptionManager {
 
                 let source =
                     crate::sealed::keys_http::HttpAttestationSource::new(client, &base_url);
+
+                let was_outdated = enclave_keys.known_outdated();
                 enclave_keys.prefetch(&source, Self::now_seconds());
+                if !was_outdated && enclave_keys.known_outdated() {
+                    crate::actions::raise_update_required(&app_handle);
+                }
             } else {
                 let warm_url = format!("{}/models", base_url.trim_end_matches('/'));
                 let _ = client

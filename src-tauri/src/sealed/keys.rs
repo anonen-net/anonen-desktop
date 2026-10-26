@@ -15,6 +15,8 @@ const REUSE_SECONDS: i64 = 3000;
 
 const REFRESH_MARGIN_SECONDS: i64 = 600;
 
+const CHECK_STALE_SECONDS: i64 = 1800;
+
 pub trait AttestationSource {
     fn attestation(&self, nonce: &str) -> Result<Value, SourceError>;
 
@@ -34,6 +36,10 @@ struct State {
     unsupported_until_seconds: i64,
 
     last_refusal_was_unknown_image: bool,
+
+    known_outdated: bool,
+
+    last_checked_seconds: Option<i64>,
 }
 
 pub struct EnclaveKeyStore {
@@ -53,12 +59,26 @@ impl EnclaveKeyStore {
     }
 
     pub fn prefetch(&self, source: &dyn AttestationSource, now_seconds: i64) {
-        if let Some(left) = self.cached_remaining_seconds(now_seconds) {
-            if left > REFRESH_MARGIN_SECONDS {
+        if !self.check_is_stale(now_seconds) {
+            if self.known_outdated() {
                 return;
+            }
+            if let Some(left) = self.cached_remaining_seconds(now_seconds) {
+                if left > REFRESH_MARGIN_SECONDS {
+                    return;
+                }
             }
         }
         self.fetch_and_cache(source, now_seconds);
+    }
+
+    pub fn known_outdated(&self) -> bool {
+        self.state.lock().map(|s| s.known_outdated).unwrap_or(false)
+    }
+
+    fn check_is_stale(&self, now_seconds: i64) -> bool {
+        let last = self.state.lock().ok().and_then(|s| s.last_checked_seconds);
+        verdict_is_stale(last, now_seconds)
     }
 
     pub fn acquire(
@@ -186,12 +206,21 @@ impl EnclaveKeyStore {
                     "[sealed] verified key_id={} image={}",
                     enclave.key_id_hex, enclave.image_digest
                 );
+                if let Ok(mut state) = self.state.lock() {
+                    state.known_outdated = false;
+                    state.last_checked_seconds = Some(now_seconds);
+                }
                 Some(*enclave)
             }
             rejected => {
                 let unknown_image = rejected.rejected_only_for_unknown_image();
                 if let Ok(mut state) = self.state.lock() {
                     state.last_refusal_was_unknown_image = unknown_image;
+                    state.last_checked_seconds = Some(now_seconds);
+                    if unknown_image {
+                        state.known_outdated = true;
+                        state.cached = None;
+                    }
                 }
                 if unknown_image {
                     info!("[sealed] the running image is not on this build's accepted list — this app is behind");
@@ -244,6 +273,10 @@ impl EnclaveKeyStore {
             }
         }
     }
+}
+
+fn verdict_is_stale(last_checked_seconds: Option<i64>, now_seconds: i64) -> bool {
+    last_checked_seconds.is_none_or(|last| now_seconds - last >= CHECK_STALE_SECONDS)
 }
 
 #[cfg(test)]
@@ -360,7 +393,10 @@ mod tests {
         let source = FakeSource::new();
         let store = store();
         store.prefetch(&source, NOW);
-        store.prefetch(&source, NOW + REUSE_SECONDS - REFRESH_MARGIN_SECONDS - 1);
+        store.prefetch(
+            &source,
+            NOW + (REUSE_SECONDS - REFRESH_MARGIN_SECONDS - 1).min(CHECK_STALE_SECONDS - 1),
+        );
         assert_eq!(1, source.attestation_calls());
     }
 
@@ -573,5 +609,100 @@ mod tests {
             .acquire(&source, NOW + UNSUPPORTED_COOLDOWN_SECONDS + 1)
             .is_none());
         assert_eq!(2, source.attestation_calls());
+    }
+
+    const OTHER: &str = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    #[test]
+    fn a_swap_to_an_image_we_do_not_accept_is_remembered_and_the_old_key_dropped() {
+        let mut source = FakeSource::new();
+        let store = store();
+        assert!(store.acquire(&source, NOW).is_some());
+        assert!(!store.known_outdated());
+
+        source.declaration.image_digest = Some(OTHER);
+        store.prefetch(&source, NOW + CHECK_STALE_SECONDS);
+        assert!(store.known_outdated());
+        assert!(!store.has_valid_cache(NOW + CHECK_STALE_SECONDS));
+
+        assert!(store.acquire(&source, NOW + CHECK_STALE_SECONDS).is_none());
+        assert!(store.last_refusal_was_unknown_image());
+    }
+
+    #[test]
+    fn a_network_failure_neither_sets_nor_clears_the_belief() {
+        let mut source = FakeSource::new();
+        let store = store_accepting(vec![OTHER.to_string()]);
+        source.attestation_fails = true;
+        assert!(store.acquire(&source, NOW).is_none());
+        assert!(
+            !store.known_outdated(),
+            "a failure proves nothing about the image"
+        );
+
+        source.attestation_fails = false;
+        assert!(store.acquire(&source, NOW).is_none());
+        assert!(store.known_outdated());
+        source.attestation_fails = true;
+        assert!(store.acquire(&source, NOW + 10).is_none());
+        assert!(store.known_outdated(), "nor does it clear what was learned");
+    }
+
+    #[test]
+    fn a_forged_declaration_is_not_taken_for_an_old_app() {
+        let mut source = FakeSource::new();
+        source.declaration.declared_key = vec![0xAA; 32];
+        let store = store();
+        assert!(store.acquire(&source, NOW).is_none());
+        assert!(!store.known_outdated());
+    }
+
+    #[test]
+    fn a_verified_declaration_clears_the_belief() {
+        let source = FakeSource::new();
+        let store = store();
+        if let Ok(mut state) = store.state.lock() {
+            state.known_outdated = true;
+            state.last_checked_seconds = Some(NOW - CHECK_STALE_SECONDS);
+        }
+        store.prefetch(&source, NOW);
+        assert!(!store.known_outdated());
+        assert_eq!(1, source.attestation_calls());
+    }
+
+    #[test]
+    fn a_fresh_behind_verdict_is_not_asked_again_on_every_press() {
+        let source = FakeSource::new();
+        let store = store_accepting(vec![OTHER.to_string()]);
+        store.prefetch(&source, NOW);
+        assert!(store.known_outdated());
+        store.prefetch(&source, NOW + 60);
+        store.prefetch(&source, NOW + CHECK_STALE_SECONDS - 1);
+        assert_eq!(1, source.attestation_calls());
+
+        store.prefetch(&source, NOW + CHECK_STALE_SECONDS);
+        assert_eq!(2, source.attestation_calls());
+    }
+
+    #[test]
+    fn a_stale_check_is_asked_again_even_with_a_reusable_key() {
+        let source = FakeSource::new();
+        let store = store();
+        store.prefetch(&source, NOW);
+        store.prefetch(&source, NOW + CHECK_STALE_SECONDS - 1);
+        assert_eq!(1, source.attestation_calls());
+        store.prefetch(&source, NOW + CHECK_STALE_SECONDS);
+        assert_eq!(2, source.attestation_calls());
+
+        assert!(store.acquire(&source, NOW + CHECK_STALE_SECONDS).is_some());
+        assert_eq!(2, source.attestation_calls());
+    }
+
+    #[test]
+    fn no_verdict_yet_is_stale_and_one_is_fresh_for_the_window() {
+        assert!(verdict_is_stale(None, NOW));
+        assert!(!verdict_is_stale(Some(NOW), NOW));
+        assert!(!verdict_is_stale(Some(NOW), NOW + CHECK_STALE_SECONDS - 1));
+        assert!(verdict_is_stale(Some(NOW), NOW + CHECK_STALE_SECONDS));
     }
 }

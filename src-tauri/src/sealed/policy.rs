@@ -49,20 +49,19 @@ impl CloudSealError {
     }
 }
 
+pub const UPDATE_REQUIRED_MESSAGE: &str = "アプリの更新が必要です";
+
 impl std::fmt::Display for CloudSealError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
             Self::Unavailable => "安全に送れる状態を確認できませんでした（音声は送っていません）",
-            Self::Outdated => {
-                "このアプリでは、いまのサーバーを確認できません。アプリを最新版に更新してください（音声は送っていません）"
-            }
+
+            Self::Outdated => UPDATE_REQUIRED_MESSAGE,
             Self::SealFailed => "音声を保護できなかったため、送信を中止しました",
             Self::KeyLostAfterSend => {
                 "サーバーに送り直せませんでした。もう一度お試しください（音声は保護して送りました）"
             }
-            Self::OutdatedAfterSend => {
-                "このアプリでは、いまのサーバーを確認できません。アプリを最新版に更新してください（音声は保護して送りました）"
-            }
+            Self::OutdatedAfterSend => UPDATE_REQUIRED_MESSAGE,
             Self::ResponseBroken => {
                 "保護された応答を受け取れませんでした。時間をおいて試してください（音声は保護して送りました）"
             }
@@ -391,7 +390,6 @@ mod tests {
         }
         for error in [
             CloudSealError::KeyLostAfterSend,
-            CloudSealError::OutdatedAfterSend,
             CloudSealError::ResponseBroken,
             CloudSealError::SealRefused,
         ] {
@@ -402,6 +400,11 @@ mod tests {
                 "{error}"
             );
         }
+
+        assert_eq!(
+            CloudSealError::OutdatedAfterSend.to_string(),
+            UPDATE_REQUIRED_MESSAGE
+        );
     }
 
     #[test]
@@ -521,10 +524,7 @@ mod tests {
                 CloudSealError::Unavailable,
                 "安全に送れる状態を確認できませんでした（音声は送っていません）",
             ),
-            (
-                CloudSealError::Outdated,
-                "このアプリでは、いまのサーバーを確認できません。アプリを最新版に更新してください（音声は送っていません）",
-            ),
+            (CloudSealError::Outdated, "アプリの更新が必要です"),
             (
                 CloudSealError::SealFailed,
                 "音声を保護できなかったため、送信を中止しました",
@@ -533,10 +533,7 @@ mod tests {
                 CloudSealError::KeyLostAfterSend,
                 "サーバーに送り直せませんでした。もう一度お試しください（音声は保護して送りました）",
             ),
-            (
-                CloudSealError::OutdatedAfterSend,
-                "このアプリでは、いまのサーバーを確認できません。アプリを最新版に更新してください（音声は保護して送りました）",
-            ),
+            (CloudSealError::OutdatedAfterSend, "アプリの更新が必要です"),
             (
                 CloudSealError::ResponseBroken,
                 "保護された応答を受け取れませんでした。時間をおいて試してください（音声は保護して送りました）",

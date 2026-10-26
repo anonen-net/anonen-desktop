@@ -49,6 +49,11 @@ pub(crate) fn request_disclosure_if_changed(app: &AppHandle, selected: &str) -> 
     true
 }
 
+pub(crate) fn update_required_for(selected_model: &str, server_known_outdated: bool) -> bool {
+    server_known_outdated
+        && selected_model.starts_with(crate::managers::model::ANONEN_CLOUD_MODEL_PREFIX)
+}
+
 fn check_preconditions(app: &AppHandle) -> Option<(&'static str, String)> {
     let auth = app.state::<AnonenCloudAuthManager>();
     if !auth.status().signed_in {
@@ -87,6 +92,15 @@ fn check_preconditions(app: &AppHandle) -> Option<(&'static str, String)> {
             return Some((
                 "model_disclosure_required",
                 "The data policy of the selected model changed; shown before sending.".to_string(),
+            ));
+        }
+
+        let tm = app.state::<Arc<TranscriptionManager>>();
+        if update_required_for(selected, tm.server_known_outdated()) {
+            tm.prefetch_enclave_key();
+            return Some((
+                "update_required",
+                crate::sealed::policy::UPDATE_REQUIRED_MESSAGE.to_string(),
             ));
         }
 
@@ -948,7 +962,9 @@ impl ShortcutAction for TranscribeAction {
                                 };
 
                             let failure = crate::cloud_failure::failure_of(&err);
-                            if failure.has_own_window_notice() {
+                            if failure.is_update_required() {
+                                raise_update_required(&ah);
+                            } else if failure.has_own_window_notice() {
                                 raise_own_window_notice(&ah, &failure, kept);
                             } else {
                                 let _ = ah.emit(
@@ -1044,6 +1060,20 @@ pub(crate) fn notify_cap_exceeded(
             suspended: cap.suspended,
         },
     );
+}
+
+pub(crate) fn raise_update_required(app: &AppHandle) {
+    let recording = app
+        .try_state::<Arc<AudioRecordingManager>>()
+        .is_some_and(|rm| rm.is_recording());
+    if recording {
+        warn!(
+            "[pipeline] the server image is not accepted by this build; cancelling the recording"
+        );
+        utils::cancel_current_operation(app);
+    }
+    let _ = app.emit("update-required", ());
+    show_main_window(app);
 }
 
 pub(crate) fn raise_own_window_notice(
@@ -1147,14 +1177,28 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 mod tests {
     use super::{
         complete_unless_cancelled, is_blank_transcription, should_abandon,
-        sleep_unless_abandoned_with, strip_think_block, AudioTooLongPayload, Cancellation,
-        CapExceededPayload, TranscriptionErrorPayload,
+        sleep_unless_abandoned_with, strip_think_block, update_required_for, AudioTooLongPayload,
+        Cancellation, CapExceededPayload, TranscriptionErrorPayload,
     };
     use std::future;
     use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
     use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
+
+    #[test]
+    fn only_a_cloud_model_is_refused_for_an_outdated_build() {
+        assert!(update_required_for(
+            "anonen-cloud:mistral/voxtral-mini-2602",
+            true
+        ));
+        assert!(!update_required_for(
+            "anonen-cloud:mistral/voxtral-mini-2602",
+            false
+        ));
+        assert!(!update_required_for("large", true));
+        assert!(!update_required_for("", true));
+    }
 
     #[test]
     fn failure_events_carry_whether_the_recording_was_kept() {

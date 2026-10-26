@@ -1303,6 +1303,10 @@ export const commands = {
       else return { status: "error", error: e as any };
     }
   },
+
+  async serverUpdateRequired(): Promise<boolean> {
+    return await TAURI_INVOKE("server_update_required");
+  },
   async retryHistoryEntryTranscription(
     id: number,
   ): Promise<Result<null, string>> {

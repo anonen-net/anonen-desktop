@@ -1,4 +1,9 @@
 {
+  "updateRequired": {
+    "reason": "We have updated the server to give you a better experience.",
+    "update": "Update",
+    "close": "Close"
+  },
   "app": {
     "name": "あのねん"
   },
@@ -823,10 +828,10 @@
   "errors": {
     "notice": {
       "seal_unavailable": "Could not confirm a safe way to send (your audio was not sent)",
-      "seal_outdated": "This app cannot verify the current server. Please update the app to the latest version (your audio was not sent)",
+      "seal_outdated": "App update required",
       "seal_failed": "The audio could not be protected, so sending was stopped",
       "seal_key_lost": "Could not resend to the server. Please try again (your audio was sent protected)",
-      "seal_outdated_after_send": "This app cannot verify the current server. Please update the app to the latest version (your audio was sent protected)",
+      "seal_outdated_after_send": "App update required",
       "seal_response_broken": "No protected response was received. Please try again later (your audio was sent protected)",
       "seal_refused": "The server did not accept the request as a protected one. Please try again later (your audio was sent protected)",
       "plaintext_refused": "The server did not accept an unprotected request",
